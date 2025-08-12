@@ -117,6 +117,9 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-slate-950 text-slate-100 font-sans;
+    background: radial-gradient(circle at top left, #1e293b, #0f172a);
+    font-family: 'Inter', sans-serif;
   }
 }
+
