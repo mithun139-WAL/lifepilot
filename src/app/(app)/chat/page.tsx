@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ChatHeader } from "@/components/chat/ChatHeader";
 import { ChatMessages } from "@/components/chat/ChatMessages";
 import { ChatPromptInput } from "@/components/chat/ChatPromptInput";
@@ -11,61 +11,35 @@ export default function ChatPage() {
   const [chats, setChats] = useState<Chat[]>([]);
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
 
-  // ✅ Create new chat with explicit ID
-  const createNewChatWithId = (id: string) => {
-    const newChat: Chat = {
-      id,
-      title: "New Chat",
-      messages: [],
-    };
-    setChats((prev) => [newChat, ...prev]);
-    setActiveChatId(id);
+  // Always fetch chats from DB
+  const fetchChatsFromDb = async () => {
+    const res = await fetch("/api/chats", { method: "GET" });
+    const loadedChats = await res.json();
+    setChats(loadedChats);
+    if (!activeChatId && loadedChats.length > 0) {
+      setActiveChatId(loadedChats[0].id);
+    }
   };
 
-  // ✅ Add user message to specific chat
-  const addUserMessage = (content: string, chatId: string) => {
-    setChats((prev) =>
-      prev.map((chat) =>
-        chat.id === chatId
-          ? {
-              ...chat,
-              messages: [...chat.messages, { role: "user", content }],
-            }
-          : chat
-      )
-    );
-  };
+  useEffect(() => {
+    fetchChatsFromDb();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  // ✅ Add empty assistant message to prepare for streaming
-  const addAssistantMessage = (chatId: string) => {
-    setChats((prev) =>
-      prev.map((chat) =>
-        chat.id === chatId
-          ? {
-              ...chat,
-              messages: [...chat.messages, { role: "assistant", content: "" }],
-            }
-          : chat
-      )
-    );
-  };
+  useEffect(() => {
+    console.log('second', chats);
+  }, [chats]);
 
-  // ✅ Stream assistant text into latest assistant message
-  const appendToAssistant = (chunk: string, chatId: string) => {
-    setChats((prev) =>
-      prev.map((chat) =>
-        chat.id === chatId
-          ? {
-              ...chat,
-              messages: chat.messages.map((msg, idx) =>
-                msg.role === "assistant" && idx === chat.messages.length - 1
-                  ? { ...msg, content: msg.content + chunk }
-                  : msg
-              ),
-            }
-          : chat
-      )
-    );
+  const handleCreateNewChat = async () => {
+    // Create a new chat in DB via POST API
+    const res = await fetch("/api/chats", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title: "New Chat" }),
+    });
+    const chat = await res.json();
+    setActiveChatId(chat.id);
+    await fetchChatsFromDb();
   };
 
   const currentChat = chats.find((c) => c.id === activeChatId);
@@ -76,20 +50,18 @@ export default function ChatPage() {
         chats={chats}
         activeChatId={activeChatId}
         setActiveChatId={setActiveChatId}
-        createNewChat={() => {
-          const id = Date.now().toString();
-          createNewChatWithId(id);
-        }}
+        createNewChat={handleCreateNewChat}
       />
       <div className="flex flex-col flex-1">
         <ChatHeader />
         <ChatMessages messages={currentChat?.messages || []} />
         <ChatPromptInput
           activeChatId={activeChatId}
-          createNewChatWithId={createNewChatWithId}
-          onUserSend={addUserMessage}
-          onAssistantStart={addAssistantMessage}
-          onAssistantStream={appendToAssistant}
+          createNewChatWithId={setActiveChatId}
+          onUserSend={() => {}}
+          onAssistantStart={() => {}}
+          onAssistantStream={() => {}}
+          onChatsLoad={fetchChatsFromDb}
         />
       </div>
     </div>

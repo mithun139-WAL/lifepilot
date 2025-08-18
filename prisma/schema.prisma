@@ -60,3 +60,19 @@ model Goal {
   userId    String
   user      User     @relation(fields: [userId], references: [id])
 }
+
+model Chat {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  title     String?
+  messages  Message[]
+}
+
+model Message {
+  id        String   @id @default(uuid())
+  chat      Chat     @relation(fields: [chatId], references: [id])
+  chatId    String
+  role      String
+  content   String
+  createdAt DateTime @default(now())
+}

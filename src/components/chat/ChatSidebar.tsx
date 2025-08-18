@@ -1,7 +1,7 @@
 import { Plus } from "lucide-react";
 
 interface SidebarProps {
-  chats: { id: string; title: string }[];
+  chats: { id: string; title: string; messages?: any[]; createdAt?: string }[];
   activeChatId: string | null;
   setActiveChatId: (id: string) => void;
   createNewChat: () => void;
@@ -13,6 +13,7 @@ export default function ChatSidebar({
   setActiveChatId,
   createNewChat,
 }: SidebarProps) {
+  console.log('chatshjcdsfgsdhf', chats);
   return (
     <aside className="w-64 bg-slate-900 text-white border-r border-slate-800 p-4 space-y-4">
       <button
@@ -34,7 +35,7 @@ export default function ChatSidebar({
                 : ""
             }`}
           >
-            {conv.title}
+            {conv.title && conv.title.trim() !== "" ? conv.title : "Untitled Chat (" + conv.id + ")"}
           </div>
         ))}
       </div>
