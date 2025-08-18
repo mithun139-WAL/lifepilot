@@ -17,6 +17,7 @@ model User {
   accounts      Account[]
   goal          Goal[]
   sessions      Session[]
+  chats         Chat[] 
 }
 
 model Account {
@@ -65,6 +66,8 @@ model Chat {
   id        String   @id @default(uuid())
   createdAt DateTime @default(now())
   title     String?
+  userId    String 
+  user      User     @relation(fields: [userId], references: [id])
   messages  Message[]
 }
 
