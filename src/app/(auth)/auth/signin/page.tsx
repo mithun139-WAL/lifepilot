@@ -32,13 +32,13 @@ export default function SignInPage() {
         )}
 
         <div className="space-y-3">
-          <button
+          {/* <button
             onClick={() => handleSignIn("github")}
             disabled={loadingProvider !== null}
             className="w-full bg-slate-800 hover:bg-slate-700 border border-slate-600 px-4 py-2 rounded-md text-white transition"
           >
             {loadingProvider === "github" ? "Signing in..." : "Sign in with GitHub"}
-          </button>
+          </button> */}
 
           <button
             onClick={() => handleSignIn("google")}
