@@ -73,7 +73,7 @@ export async function POST(req: NextRequest) {
             Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
           },
           body: JSON.stringify({
-            model: "deepseek-r1-distill-llama-70b",
+            model: "openai/gpt-oss-20b",
             messages,
             temperature: 0.6,
             max_tokens: 4096,
