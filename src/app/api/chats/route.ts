@@ -3,9 +3,9 @@ import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 
 export async function POST(request: Request) {
-  const { title } = await request.json();
+  const { title,userId } = await request.json();
   const chat = await prisma.chat.create({
-    data: { title },
+    data: { title,userId },
   });
   return new Response(JSON.stringify(chat), { status: 200 });
 }
@@ -15,6 +15,5 @@ export async function GET() {
     include: { messages: true },
     orderBy: { createdAt: "desc" },
   });
-  console.log('Fetched chats:', chats);
   return new Response(JSON.stringify(chats), { status: 200 });
 }

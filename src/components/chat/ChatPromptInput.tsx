@@ -7,12 +7,14 @@ export function ChatPromptInput({
   onAssistantStream,
   activeChatId,
   createNewChatWithId,
+  onAssistantDone, // <-- Add this prop
 }: {
   onUserSend: (content: string, chatId: string) => void;
   onAssistantStart: (chatId: string) => void;
   onAssistantStream: (chunk: string, chatId: string) => void;
   activeChatId: string | null;
   createNewChatWithId: (id: string) => void;
+  onAssistantDone?: (chatId: string) => void; // <-- Add this prop type
 }) {
   const [input, setInput] = useState("");
 
@@ -27,12 +29,28 @@ export function ChatPromptInput({
 
     // ✅ Create new chat and assign new ID
     if (!chatId) {
-      chatId = Date.now().toString();
+      // Create chat in DB and get its ID
+      const chatRes = await fetch("/api/chats", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: userMessage.slice(0, 30) }),
+      });
+      const chatData = await chatRes.json();
+      chatId = chatData.id;
       createNewChatWithId(chatId);
 
-      // ⏱️ Wait one tick to ensure UI reflects the new chat
       await new Promise((resolve) => setTimeout(resolve, 0));
     }
+
+    // Save user prompt to DB
+    await fetch(`/api/chats/${chatId}/messages`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        role: "user",
+        content: userMessage,
+      }),
+    });
 
     onUserSend(userMessage, chatId);
     onAssistantStart(chatId);
@@ -41,6 +59,7 @@ export function ChatPromptInput({
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
+        chatId,
         messages: [{ role: "user", content: userMessage }],
       }),
     });
@@ -49,12 +68,39 @@ export function ChatPromptInput({
     const decoder = new TextDecoder();
     let done = false;
 
+    let assistantContent = "";
+
     while (!done) {
       const { value, done: doneReading } = await reader!.read();
       done = doneReading;
       const chunkValue = decoder.decode(value);
+      assistantContent += chunkValue;
       onAssistantStream(chunkValue, chatId);
     }
+
+    // Save LLM response to DB (use the same API route as user message)
+    await fetch(`/api/chats/${chatId}/messages`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        role: "assistant",
+        content: assistantContent,
+      }),
+    });
+
+    // Notify parent that assistant message is done
+    if (typeof onAssistantDone === "function") {
+      onAssistantDone(chatId);
+    }
+
+    // Refetch chats/messages from DB to update FE
+    // If you have an onChatsLoad or similar, call it here
+    // Example:
+    // if (typeof onChatsLoad === "function") {
+    //   const chatsRes = await fetch("/api/chats", { method: "GET" });
+    //   const chats = await chatsRes.json();
+    //   onChatsLoad(chats);
+    // }
   };
 
   return (
