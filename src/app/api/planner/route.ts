@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
     return new Response("Goal not found", { status: 404 });
   }
 
-  const { title, hoursPerDay, targetDays } = goal;
+  const { title, hoursPerDay, targetWeeks } = goal;
   try {
     const roadmapRes = await fetch(
       "https://api.groq.com/openai/v1/chat/completions",
@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
             },
             {
               role: "user",
-              content: `You are an expert learning planner. Create a ${targetDays} week roadmap for this learning goal: ${title} spending ${hoursPerDay} a day.
+              content: `You are an expert learning planner. Create a ${targetWeeks} week roadmap for this learning goal: ${title} spending ${hoursPerDay} a day.
                 Break into weeks with milestones only (no tasks yet). 
                 Output only a stringified JSON object. Do not include any text outside the JSON. Do NOT include any prefix, labels, or explanatory text. Start immediately with '{'. 
                 Example:
@@ -114,13 +114,32 @@ export async function POST(req: NextRequest) {
                     "tasks": [
                       {
                         "day": 1,
-                        "title": "Task title",
-                        "description": "1–2 sentence explanation",
-                        "expectedTime": "1–2 hours",
+                        "title": "Task title e.g. 'Learn numbers 1-100'",
+                        "description": "1–2 sentence actionable description",
+                        "checklists": [
+                           {
+                             "title": "Numbers 1-50",
+                             "description": "Study numbers 1–50 and practice counting objects.",
+                             "expectedTime": "1 hour"
+                           },
+                           {
+                             "title": "Numbers 51-100",
+                             "description": "Study numbers 51–100 and use in simple sentences (age, price).",
+                             "expectedTime": "1 hour"
+                           }
+                          ]
                         "dueDate": "YYYY-MM-DD"
                       }
                     ]
-                  }`,
+                  }
+                  Rules:
+                - Each day must have 2–5 checklists.
+                - Tasks must directly support the milestone of that week.
+                - Keep descriptions short, actionable, and focused (1–2 lines max).
+                - Assign a dueDate (sequential inside the week).
+                - Day 7 should always be Review & Self-Assessment of the week milestone.
+                - Do not overlap content across days; each task should build on the previous one,
+                - Keep the tone motivational but realistic`,
               },
             ],
             temperature: 0,

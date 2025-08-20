@@ -20,14 +20,10 @@ export default async function ProtectedLayout({
 
   const goal = await prisma.goal.findFirst({
     where: { userId },
-    include: { LearningPlan: true },
+    include: { learningPlan: true },
   });
 
   if (!goal) {
-    redirect("/goal");
-  }
-
-  if (goal && goal.LearningPlan.length === 0) {
     redirect("/goal");
   }
 

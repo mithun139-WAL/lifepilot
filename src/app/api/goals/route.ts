@@ -34,9 +34,9 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json();
-    const { title, hoursPerDay, targetDays } = body;
+    const { title, hoursPerDay, targetWeeks, preferredTime } = body;
 
-    if (!title || !hoursPerDay || !targetDays) {
+    if (!title || !hoursPerDay || !targetWeeks || !preferredTime) {
       return NextResponse.json(
         { success: false, error: "Missing required fields" },
         { status: 400 }
@@ -47,7 +47,8 @@ export async function POST(req: Request) {
       data: {
         title,
         hoursPerDay,
-        targetDays,
+        targetWeeks,
+        preferredTime,
         userId: session.user.id,
       },
     });

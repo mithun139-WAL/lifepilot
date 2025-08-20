@@ -1,4 +1,5 @@
 "use client";
+import { Send } from "lucide-react";
 import { useState } from "react";
 
 export function ChatPromptInput({
@@ -37,7 +38,9 @@ export function ChatPromptInput({
       });
       const chatData = await chatRes.json();
       chatId = chatData.id;
-      createNewChatWithId(chatId);
+      if (chatId) {
+        createNewChatWithId(chatId);
+      }
 
       await new Promise((resolve) => setTimeout(resolve, 0));
     }
@@ -52,8 +55,16 @@ export function ChatPromptInput({
       }),
     });
 
-    onUserSend(userMessage, chatId);
-    onAssistantStart(chatId);
+    if (chatId) {
+      onUserSend(userMessage, chatId);
+    } else {
+      console.error("Chat ID is null. Cannot send user message.");
+    }
+    if (chatId) {
+      onAssistantStart(chatId);
+    } else {
+      console.error("Chat ID is null. Cannot start assistant.");
+    }
 
     const res = await fetch("/api/chat", {
       method: "POST",
@@ -75,7 +86,11 @@ export function ChatPromptInput({
       done = doneReading;
       const chunkValue = decoder.decode(value);
       assistantContent += chunkValue;
-      onAssistantStream(chunkValue, chatId);
+      if (chatId) {
+        onAssistantStream(chunkValue, chatId);
+      } else {
+        console.error("Chat ID is null. Cannot stream assistant response.");
+      }
     }
 
     // Save LLM response to DB (use the same API route as user message)
@@ -89,8 +104,10 @@ export function ChatPromptInput({
     });
 
     // Notify parent that assistant message is done
-    if (typeof onAssistantDone === "function") {
+    if (typeof onAssistantDone === "function" && chatId) {
       onAssistantDone(chatId);
+    } else if (!chatId) {
+      console.error("Chat ID is null. Cannot notify assistant completion.");
     }
 
     // Refetch chats/messages from DB to update FE
@@ -111,13 +128,13 @@ export function ChatPromptInput({
           value={input}
           onChange={(e) => setInput(e.target.value)}
           placeholder="Ask anything..."
-          className="flex-1 p-3 rounded-xl bg-white/10 text-white border border-slate-700 placeholder:text-slate-400 focus:outline-none"
+          className="flex-1 bg-transparent text-white outline-none placeholder:text-slate-400 border border-blue-500/30 rounded-xl px-4 py-3 backdrop-blur-md shadow-[0_0_20px_#3B82F6]/30 flex items-center gap-3"
         />
         <button
           type="submit"
-          className="px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded-xl text-white"
+          className="px-4 rounded-full bg-blue-500 hover:bg-blue-900 transition cursor-pointer"
         >
-          Send
+          <Send size={16} className="text-white" />
         </button>
       </form>
     </div>

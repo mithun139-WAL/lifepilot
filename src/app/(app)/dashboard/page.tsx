@@ -1,6 +1,5 @@
 import React from "react";
 import "@fontsource/orbitron";
-import PromptBox from "@/components/dashboard/PromptBox";
 import { SmartSuggestion } from "@/components/dashboard/SmartSuggestion";
 import { TodayTimeline } from "@/components/dashboard/TodayTimeline";
 import { HabitStats } from "@/components/dashboard/HabitStats";
@@ -29,10 +28,6 @@ const DashboardPage = () => {
           <FocusPanel />
           <UpcomingReminders />
         </div>
-      </div>
-
-      <div className="flex-shrink-0">
-        <PromptBox />
       </div>
     </div>
   );

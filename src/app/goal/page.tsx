@@ -10,9 +10,10 @@ export default function GoalPage() {
 
   const [title, setTitle] = useState("");
   const [hoursPerDay, setHoursPerDay] = useState("");
-  const [targetDays, setTargetDays] = useState("");
+  const [targetWeeks, setTargetWeeks] = useState("");
   const [goalId, setGoalId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [preferredTime, setPreferredTime] = useState("");
 
   const handleNext = () => {
     if (title.trim()) {
@@ -31,7 +32,8 @@ export default function GoalPage() {
         body: JSON.stringify({
           title,
           hoursPerDay: Number(hoursPerDay),
-          targetDays: Number(targetDays),
+          targetWeeks: Number(targetWeeks),
+          preferredTime: preferredTime ? new Date(preferredTime).toISOString() : null,
         }),
       });
       if (res.ok) {
@@ -140,7 +142,9 @@ export default function GoalPage() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <h1 className="text-2xl font-bold text-center mb-6">{title}</h1>
             <div>
-              <label className="block font-medium">How many hours you can spend?</label>
+              <label className="block font-medium">
+                How many hours you can spend?
+              </label>
               <input
                 type="number"
                 value={hoursPerDay}
@@ -154,12 +158,25 @@ export default function GoalPage() {
               <label className="block font-medium">Duration (in weeks)</label>
               <input
                 type="number"
-                value={targetDays}
-                onChange={(e) => setTargetDays(e.target.value)}
+                value={targetWeeks}
+                onChange={(e) => setTargetWeeks(e.target.value)}
                 placeholder="e.g. 4"
                 className="bg-transparent text-white outline-none placeholder:text-slate-400 border border-blue-500/30 rounded-xl px-4 py-3 w-full"
                 required
               />
+            </div>
+            <div>
+              <label className="block font-medium">Preferred Start Time</label>
+              <input
+                type="datetime-local"
+                value={preferredTime}
+                onChange={(e) => setPreferredTime(e.target.value)}
+                className="bg-transparent text-white outline-none placeholder:text-slate-400 border border-blue-500/30 rounded-xl px-4 py-3 w-full"
+                required
+              />
+              <p className="text-xs text-slate-400 mt-1">
+                Format: YYYY-MM-DDTHH:MM:SS (only start time is required)
+              </p>
             </div>
             <button
               type="submit"
@@ -179,7 +196,7 @@ export default function GoalPage() {
               className="bg-green-600 text-white py-2 px-6 rounded hover:bg-green-700 cursor-pointer"
               disabled={loading}
             >
-             {loading ? "Generating..." : "Generate Plan"}
+              {loading ? "Generating..." : "Generate Plan"}
             </button>
           </div>
         )}
