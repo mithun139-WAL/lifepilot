@@ -18,12 +18,13 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useEffect, useState } from "react";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: Home },
   { href: "/chat", label: "Chat", icon: Bot },
   { href: "/planner", label: "Planner", icon: Calendar },
-  { href: "/tasks", label: "Tasks", icon: ListTodo  },
+  { href: "/tasks", label: "Tasks", icon: ListTodo },
   { href: "/habits", label: "Habits", icon: Target },
   { href: "/insights", label: "Insights", icon: BarChart },
   { href: "/settings", label: "Settings", icon: Settings },
@@ -37,6 +38,25 @@ export function Sidebar({
   toggle: () => void;
 }) {
   const pathname = usePathname();
+  const [plans, setPlans] = useState<{ id: string; topic: string }[]>([]);
+
+  const fetchPlans = async () => {
+    try {
+      const res = await fetch("/api/learning-plans");
+      if (res.ok) {
+        const data = await res.json();
+        setPlans(data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch learning plans:", err);
+    }
+  };
+
+  useEffect(() => {
+    fetchPlans();
+  }, []);
+
+  console.log("Plans fetched:", plans);
 
   return (
     <aside
@@ -96,6 +116,56 @@ export function Sidebar({
                 <TooltipTrigger asChild>{link}</TooltipTrigger>
                 <TooltipContent side="right" sideOffset={6}>
                   {label}
+                </TooltipContent>
+              </Tooltip>
+            ) : (
+              link
+            );
+          })}
+          <div className="border-t border-slate-700 my-3" />
+
+          {/* Dynamic plans */}
+          {plans.map((plan) => {
+            const href = `/plans/${plan.id}`;
+            const isActive = pathname === href;
+
+            const link = (
+              <Link
+                key={plan.id}
+                href={href}
+                className={cn(
+                  "group flex items-center transition-all duration-300 ease-in-out rounded-md",
+                  collapsed ? "justify-center" : "gap-3 px-3 py-2",
+                  !collapsed &&
+                    isActive &&
+                    "bg-slate-800 font-semibold border-l-4 border-blue-500 shadow-blue-500/40 shadow",
+                  !collapsed && "hover:bg-slate-700"
+                )}
+              >
+                <div
+                  className={cn(
+                    "p-2 rounded-md flex items-center justify-center transition-all",
+                    collapsed
+                      ? cn(
+                          "w-10 h-10",
+                          isActive
+                            ? "bg-blue-500/20 border border-blue-500 shadow-[0_0_10px_#3B82F6]"
+                            : "bg-white/5 border border-white/10 hover:bg-blue-500/10 hover:shadow-[0_0_6px_#3B82F6]"
+                        )
+                      : ""
+                  )}
+                >
+                  <Target size={18} />
+                </div>
+                {!collapsed && <span className="text-sm">{plan.topic}</span>}
+              </Link>
+            );
+
+            return collapsed ? (
+              <Tooltip key={plan.id}>
+                <TooltipTrigger asChild>{link}</TooltipTrigger>
+                <TooltipContent side="right" sideOffset={6}>
+                  {plan.topic}
                 </TooltipContent>
               </Tooltip>
             ) : (

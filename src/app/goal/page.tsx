@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowRight } from "lucide-react";
+import { DateTimePickerForm } from "@/components/ui/date-time-picker";
 
 export default function GoalPage() {
   const router = useRouter();
@@ -33,7 +34,9 @@ export default function GoalPage() {
           title,
           hoursPerDay: Number(hoursPerDay),
           targetWeeks: Number(targetWeeks),
-          preferredTime: preferredTime ? new Date(preferredTime).toISOString() : null,
+          preferredTime: preferredTime
+            ? new Date(preferredTime).toISOString()
+            : null,
         }),
       });
       if (res.ok) {
@@ -140,7 +143,7 @@ export default function GoalPage() {
 
         {step === "details" && (
           <form onSubmit={handleSubmit} className="space-y-4">
-            <h1 className="text-2xl font-bold text-center mb-6">{title}</h1>
+            <h1 className="text-2xl font-bold text-center mb-6 capitalize">{title}</h1>
             <div>
               <label className="block font-medium">
                 How many hours you can spend?
@@ -167,16 +170,11 @@ export default function GoalPage() {
             </div>
             <div>
               <label className="block font-medium">Preferred Start Time</label>
-              <input
-                type="datetime-local"
+              <DateTimePickerForm
                 value={preferredTime}
-                onChange={(e) => setPreferredTime(e.target.value)}
-                className="bg-transparent text-white outline-none placeholder:text-slate-400 border border-blue-500/30 rounded-xl px-4 py-3 w-full"
+                onChange={(val) => setPreferredTime(val)}
                 required
               />
-              <p className="text-xs text-slate-400 mt-1">
-                Format: YYYY-MM-DDTHH:MM:SS (only start time is required)
-              </p>
             </div>
             <button
               type="submit"
@@ -190,7 +188,7 @@ export default function GoalPage() {
 
         {step === "done" && (
           <div className="text-center space-y-4">
-            <h1 className="text-2xl font-bold">{title}</h1>
+            <h1 className="text-2xl font-bold capitalize">{title}</h1>
             <button
               onClick={handleGeneratePlan}
               className="bg-green-600 text-white py-2 px-6 rounded hover:bg-green-700 cursor-pointer"

@@ -94,7 +94,6 @@ model Planner {
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @default(now())
   progress       Int          @default(0)
-  Habit          Habit[]
   goal           Goal         @relation(fields: [goalId], references: [id], onDelete: Cascade)
   user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   learningPlan   LearningPlan @relation(fields: [learningPlanId], references: [id], onDelete: Cascade)
@@ -158,8 +157,6 @@ model Habit {
   user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   learningPlan   LearningPlan    @relation(fields: [learningPlanId], references: [id], onDelete: Cascade)
   completions    HabitProgress[]
-  Planner        Planner?        @relation(fields: [plannerId], references: [id])
-  plannerId      String?
 
   @@index([userId])
 }
