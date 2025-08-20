@@ -1,7 +1,12 @@
 import { Plus } from "lucide-react";
 
 interface SidebarProps {
-  chats: { id: string; title: string; messages?: any[]; createdAt?: string }[];
+  chats: {
+    id: string;
+    title: string;
+    messages?: { sender: string; content: string; timestamp?: string }[];
+    createdAt?: string;
+  }[];
   activeChatId: string | null;
   setActiveChatId: (id: string) => void;
   createNewChat: () => void;
@@ -13,7 +18,6 @@ export default function ChatSidebar({
   setActiveChatId,
   createNewChat,
 }: SidebarProps) {
-  console.log('chatshjcdsfgsdhf', chats);
   return (
     <aside className="w-64 bg-slate-900 text-white border-r border-slate-800 p-4 space-y-4">
       <button
@@ -25,19 +29,25 @@ export default function ChatSidebar({
       </button>
 
       <div className="space-y-2">
-        {chats.map((conv) => (
-          <div
-            key={conv.id}
-            onClick={() => setActiveChatId(conv.id)}
-            className={`cursor-pointer px-3 py-2 rounded-md hover:bg-slate-800 transition-all ${
-              activeChatId === conv.id
-                ? "bg-slate-800 font-semibold border-l-4 border-blue-500"
-                : ""
-            }`}
-          >
-            {conv.title && conv.title.trim() !== "" ? conv.title : "Untitled Chat (" + conv.id + ")"}
-          </div>
-        ))}
+        {Array.isArray(chats) && chats.length > 0 ? (
+          chats.map((conv) => (
+            <div
+              key={conv.id}
+              onClick={() => setActiveChatId(conv.id)}
+              className={`cursor-pointer px-3 py-2 rounded-md hover:bg-slate-800 transition-all ${
+                activeChatId === conv.id
+                  ? "bg-slate-800 font-semibold border-l-4 border-blue-500"
+                  : ""
+              }`}
+            >
+              {conv.title?.trim() !== ""
+                ? conv.title
+                : "Untitled Chat (" + conv.id + ")"}
+            </div>
+          ))
+        ) : (
+          <p className="text-slate-400 text-sm italic">No chats yet</p>
+        )}
       </div>
     </aside>
   );

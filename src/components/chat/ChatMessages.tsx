@@ -1,4 +1,3 @@
-// import ReactMarkdown from "react-markdown";
 interface Props {
   messages: { role: string; content: string }[];
 }
@@ -16,7 +15,7 @@ function formatMessageForMarkdown(message: string): string {
 }
 
 export function ChatMessages({ messages }: Props) {
-  if (messages.length === 0) {
+  if (!Array.isArray(messages) || messages.length === 0) {
     return (
       <div className="flex-1 flex items-center justify-center text-slate-400">
         Start a new conversation...

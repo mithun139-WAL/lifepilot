@@ -1,7 +1,10 @@
+import { authOptions } from "@/lib/auth";
 import { groqFetchWithRetry } from "@/lib/groqFetch";
+import { prisma } from "@/lib/prisma";
+import { getServerSession } from "next-auth";
 import { NextRequest } from "next/server";
 
-export const runtime = "edge";
+// export const runtime = "edge";
 
 function extractJSON(text: string): string | null {
   const match = text.match(/\{[\s\S]*\}/);
@@ -9,13 +12,22 @@ function extractJSON(text: string): string | null {
 }
 
 export async function POST(req: NextRequest) {
-  const { goal, duration } = await req.json();
-  if (!goal || !duration) {
-    return new Response("Missing goal or duration", { status: 400 });
+  console.log("➡️ Triggering fetchPlanner...");
+  const { goalId } = await req.json();
+  if (!goalId) {
+    return new Response("Missing goalId", { status: 400 });
+  }
+  const session = await getServerSession(authOptions);
+  const goal = await prisma.goal.findUnique({
+    where: { id: goalId },
+  });
+
+  if (!goal) {
+    return new Response("Goal not found", { status: 404 });
   }
 
+  const { title, hoursPerDay, targetDays } = goal;
   try {
-    // 1. Generate ROADMAP
     const roadmapRes = await fetch(
       "https://api.groq.com/openai/v1/chat/completions",
       {
@@ -34,7 +46,7 @@ export async function POST(req: NextRequest) {
             },
             {
               role: "user",
-              content: `You are an expert learning planner. Create a ${duration} roadmap for this learning goal: ${goal}.
+              content: `You are an expert learning planner. Create a ${targetDays} roadmap for this learning goal: ${title} spending ${hoursPerDay} a day.
                 Break into weeks with milestones only (no tasks yet). 
                 Output only a stringified JSON object. Do not include any text outside the JSON. Do NOT include any prefix, labels, or explanatory text. Start immediately with '{'. 
                 Example:
@@ -63,7 +75,6 @@ export async function POST(req: NextRequest) {
     );
 
     const roadmapData = await roadmapRes.json();
-    console.log("📡 Full roadmapData:", JSON.stringify(roadmapData, null, 2));
     const cleanRoadmapText = roadmapData.choices?.[0]?.message?.content?.trim();
     if (!cleanRoadmapText) throw new Error("No roadmap content received");
     const roadmap = JSON.parse(cleanRoadmapText);
@@ -77,8 +88,6 @@ export async function POST(req: NextRequest) {
     const tasks: Task[][] = [];
 
     for (const week of roadmap.planner) {
-      console.log(`Generating tasks for Week ${week.week}...`);
-    
       const tasksRes = await groqFetchWithRetry(
         "https://api.groq.com/openai/v1/chat/completions",
         {
@@ -92,11 +101,12 @@ export async function POST(req: NextRequest) {
             messages: [
               {
                 role: "assistant",
-                content: "You are a task generator. Output structured weekly tasks only.",
+                content:
+                  "You are a task generator. Output structured weekly tasks only.",
               },
               {
                 role: "user",
-                content: `You are an expert tutor. For the goal '${goal}', generate detailed tasks for Week ${week.week} with milestone: ${week.milestone}.
+                content: `You are an expert tutor. For the goal '${title}', generate detailed tasks for Week ${week.week} with milestone: ${week.milestone}.
                   Break down the milestone into daily tasks.
                   Output only a stringified JSON object. Do not include any text outside the JSON. Do NOT include any prefix, labels, or explanatory text. Start immediately with '{'.
                   {
@@ -110,45 +120,54 @@ export async function POST(req: NextRequest) {
                         "dueDate": "YYYY-MM-DD"
                       }
                     ]
-                  }`
-              }
+                  }`,
+              },
             ],
             temperature: 0,
             stream: false,
           }),
         }
       );
-    
+
       const rawText = await tasksRes.text();
-      console.log(`📡 Raw tasks response (Week ${week.week}):`, rawText);
-    
-      let tasksData: { choices?: { message?: { content?: string } }[] } | undefined;
+      let tasksData:
+        | { choices?: { message?: { content?: string } }[] }
+        | undefined;
       try {
         tasksData = JSON.parse(rawText);
       } catch (err) {
         console.error("❌ Failed to parse tasksRes as JSON:", err);
         continue;
       }
-    
-      const cleanTasksText = tasksData?.choices?.[0]?.message?.content?.trim() ?? null;
+
+      const cleanTasksText =
+        tasksData?.choices?.[0]?.message?.content?.trim() ?? null;
       if (!cleanTasksText) {
         console.error(`❌ No content in tasks response for Week ${week.week}`);
         continue;
       }
-    
+
       const taskJsonString = extractJSON(cleanTasksText);
       if (!taskJsonString) {
-        console.error(`❌ Could not extract JSON for Week ${week.week}:`, cleanTasksText);
+        console.error(
+          `❌ Could not extract JSON for Week ${week.week}:`,
+          cleanTasksText
+        );
         continue;
       }
-    
+
       try {
         const parsedWeekTasks = JSON.parse(taskJsonString);
         tasks.push(parsedWeekTasks);
       } catch (err) {
-        console.error(`❌ JSON parse error for Week ${week.week}:`, err, taskJsonString);
+        console.error(
+          `❌ JSON parse error for Week ${week.week}:`,
+          err,
+          taskJsonString
+        );
       }
     }
+
 
     const habitsRes = await groqFetchWithRetry(
       "https://api.groq.com/openai/v1/chat/completions",
@@ -168,7 +187,7 @@ export async function POST(req: NextRequest) {
             },
             {
               role: "user",
-              content: `For the goal '${goal}', suggest recurring supportive habits.
+              content: `For the goal '${title}', suggest recurring supportive habits.
               These should help the user succeed in the long term, not one-off tasks.
               Output only a stringified JSON object. Do not include any text outside the JSON. Do NOT include any prefix, labels, or explanatory text. Start immediately with '{'.
               {
@@ -195,20 +214,39 @@ export async function POST(req: NextRequest) {
 
     const habitsData = await habitsRes.json();
     if (!habitsData.choices?.length) {
-        console.error("❌ No habits data in response:", habitsData);
-        return new Response(
-          JSON.stringify({ habits: [] }),
-          { status: 200, headers: { "Content-Type": "application/json" } }
-        );
-      }
-    console.log("Habits response:", habitsData);
+      console.error("❌ No habits data in response:", habitsData);
+      return new Response(JSON.stringify({ habits: [] }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
     const cleanHabitsText = habitsData.choices?.[0]?.message?.content?.trim();
     const habitsJsonString = extractJSON(cleanHabitsText || "");
     const habits = habitsJsonString ? JSON.parse(habitsJsonString) : null;
+    console.log("Habits response:", habits?.habits, roadmap.planner, tasks);
 
-    return new Response(JSON.stringify({ roadmap, tasks, habits }), {
-      headers: { "Content-Type": "application/json" },
-    });
+    const dbRes = await fetch(
+      `${process.env.NEXT_PUBLIC_API_URL}/api/learning-plans`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: session?.user?.id,
+          topic: title,
+          planner: roadmap.planner,
+          task_list: tasks,
+          habits_list: habits?.habits || [],
+          goalId: goal.id,
+        }),
+      }
+    );
+
+    const dbData = await dbRes.json();
+
+    return new Response(
+      JSON.stringify({ roadmap, tasks, habits, savedPlan: dbData }),
+      { headers: { "Content-Type": "application/json" } }
+    );
   } catch (err) {
     console.error("Planner API failed:", err);
     return new Response(JSON.stringify({ error: "Planner API failed" }), {
