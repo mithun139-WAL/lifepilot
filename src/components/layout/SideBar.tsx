@@ -23,9 +23,9 @@ import { useEffect, useState } from "react";
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: Home },
   { href: "/chat", label: "Chat", icon: Bot },
-  { href: "/planner", label: "Planner", icon: Calendar },
-  { href: "/tasks", label: "Tasks", icon: ListTodo },
-  { href: "/habits", label: "Habits", icon: Target },
+  // { href: "/planner", label: "Planner", icon: Calendar },
+  // { href: "/tasks", label: "Tasks", icon: ListTodo },
+  // { href: "/habits", label: "Habits", icon: Target },
   { href: "/insights", label: "Insights", icon: BarChart },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
@@ -56,7 +56,7 @@ export function Sidebar({
     fetchPlans();
   }, []);
 
-  console.log("Plans fetched:", plans);
+  // console.log("Plans fetched:", plans);
 
   return (
     <aside
