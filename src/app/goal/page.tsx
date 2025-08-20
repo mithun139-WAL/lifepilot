@@ -12,6 +12,7 @@ export default function GoalPage() {
   const [hoursPerDay, setHoursPerDay] = useState("");
   const [targetDays, setTargetDays] = useState("");
   const [goalId, setGoalId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
   const handleNext = () => {
     if (title.trim()) {
@@ -21,6 +22,7 @@ export default function GoalPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLoading(true);
 
     try {
       const res = await fetch("/api/goals", {
@@ -41,11 +43,14 @@ export default function GoalPage() {
     } catch (error) {
       console.error("Failed to create goal:", error);
       return;
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleGeneratePlan = async () => {
     if (!goalId) return;
+    setLoading(true);
     try {
       console.log("➡️ Triggering plan generation for goal ID:", goalId);
       const res = await fetch("/api/planner", {
@@ -61,6 +66,8 @@ export default function GoalPage() {
     } catch (error) {
       console.error("Failed to generate plan:", error);
       return;
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -121,7 +128,7 @@ export default function GoalPage() {
               />
               <button
                 onClick={handleNext}
-                className="bg-blue-600 p-3 rounded-xl hover:bg-blue-700"
+                className="bg-blue-600 p-3 rounded-xl hover:bg-blue-700 cursor-pointer transition-colors duration-200"
               >
                 <ArrowRight className="w-5 h-5" />
               </button>
@@ -133,30 +140,33 @@ export default function GoalPage() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <h1 className="text-2xl font-bold text-center mb-6">{title}</h1>
             <div>
-              <label className="block font-medium">Hours per Day</label>
+              <label className="block font-medium">How many hours you can spend?</label>
               <input
                 type="number"
                 value={hoursPerDay}
                 onChange={(e) => setHoursPerDay(e.target.value)}
+                placeholder="e.g. 2"
                 className="bg-transparent text-white outline-none placeholder:text-slate-400 border border-blue-500/30 rounded-xl px-4 py-3 w-full"
                 required
               />
             </div>
             <div>
-              <label className="block font-medium">Target Days</label>
+              <label className="block font-medium">Duration (in weeks)</label>
               <input
                 type="number"
                 value={targetDays}
                 onChange={(e) => setTargetDays(e.target.value)}
+                placeholder="e.g. 4"
                 className="bg-transparent text-white outline-none placeholder:text-slate-400 border border-blue-500/30 rounded-xl px-4 py-3 w-full"
                 required
               />
             </div>
             <button
               type="submit"
-              className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700"
+              className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 cursor-pointer"
+              disabled={loading}
             >
-              Save Goal
+              {loading ? "Saving..." : "Save Goal"}
             </button>
           </form>
         )}
@@ -166,9 +176,10 @@ export default function GoalPage() {
             <h1 className="text-2xl font-bold">{title}</h1>
             <button
               onClick={handleGeneratePlan}
-              className="bg-green-600 text-white py-2 px-6 rounded hover:bg-green-700"
+              className="bg-green-600 text-white py-2 px-6 rounded hover:bg-green-700 cursor-pointer"
+              disabled={loading}
             >
-              Generate Plan
+             {loading ? "Generating..." : "Generate Plan"}
             </button>
           </div>
         )}

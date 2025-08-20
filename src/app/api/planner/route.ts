@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
             },
             {
               role: "user",
-              content: `You are an expert learning planner. Create a ${targetDays} roadmap for this learning goal: ${title} spending ${hoursPerDay} a day.
+              content: `You are an expert learning planner. Create a ${targetDays} week roadmap for this learning goal: ${title} spending ${hoursPerDay} a day.
                 Break into weeks with milestones only (no tasks yet). 
                 Output only a stringified JSON object. Do not include any text outside the JSON. Do NOT include any prefix, labels, or explanatory text. Start immediately with '{'. 
                 Example:
