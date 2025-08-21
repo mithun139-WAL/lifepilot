@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/tooltip";
 import { useEffect, useState } from "react";
 import AddGoalPopover from "../common/GoalPopover";
+import PlannerLoader from "../common/PlannerLoader";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: Home },
@@ -38,8 +39,10 @@ export function Sidebar({
 }) {
   const pathname = usePathname();
   const [plans, setPlans] = useState<{ id: string; topic: string }[]>([]);
+  const [loading, setLoading] = useState(true);
 
   const fetchPlans = async () => {
+    setLoading(true);
     try {
       const res = await fetch("/api/learning-plans");
       if (res.ok) {
@@ -48,6 +51,8 @@ export function Sidebar({
       }
     } catch (err) {
       console.error("Failed to fetch learning plans:", err);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -122,57 +127,65 @@ export function Sidebar({
           <div className="border-t border-slate-700 my-3" />
 
           <div className="px-2 mb-2">
-            <AddGoalPopover collapsed={collapsed} onPlanCreated={fetchPlans} disabled={plans.length >= 5} />
+            <AddGoalPopover
+              collapsed={collapsed}
+              onPlanCreated={fetchPlans}
+              disabled={plans.length >= 5}
+            />
           </div>
 
           {/* Dynamic plans */}
-          {plans.map((plan) => {
-            const href = `/plans/${plan.id}`;
-            const isActive = pathname === href;
+          {loading ? (
+            <PlannerLoader />
+          ) : (
+            plans.map((plan) => {
+              const href = `/plans/${plan.id}`;
+              const isActive = pathname === href;
 
-            const link = (
-              <Link
-                key={plan.id}
-                href={href}
-                className={cn(
-                  "group flex items-center transition-all duration-300 ease-in-out rounded-md",
-                  collapsed ? "justify-center" : "gap-3 px-3 py-2",
-                  !collapsed &&
-                    isActive &&
-                    "bg-slate-800 font-semibold border-l-4 border-blue-500 shadow-blue-500/40 shadow",
-                  !collapsed && "hover:bg-slate-700"
-                )}
-              >
-                <div
+              const link = (
+                <Link
+                  key={plan.id}
+                  href={href}
                   className={cn(
-                    "p-2 rounded-md flex items-center justify-center transition-all",
-                    collapsed
-                      ? cn(
-                          "w-10 h-10",
-                          isActive
-                            ? "bg-blue-500/20 border border-blue-500 shadow-[0_0_10px_#3B82F6]"
-                            : "bg-white/5 border border-white/10 hover:bg-blue-500/10 hover:shadow-[0_0_6px_#3B82F6]"
-                        )
-                      : ""
+                    "group flex items-center transition-all duration-300 ease-in-out rounded-md",
+                    collapsed ? "justify-center" : "gap-3 px-3 py-2",
+                    !collapsed &&
+                      isActive &&
+                      "bg-slate-800 font-semibold border-l-4 border-blue-500 shadow-blue-500/40 shadow",
+                    !collapsed && "hover:bg-slate-700"
                   )}
                 >
-                  <Target size={18} />
-                </div>
-                {!collapsed && <span className="text-sm">{plan.topic}</span>}
-              </Link>
-            );
+                  <div
+                    className={cn(
+                      "p-2 rounded-md flex items-center justify-center transition-all",
+                      collapsed
+                        ? cn(
+                            "w-10 h-10",
+                            isActive
+                              ? "bg-blue-500/20 border border-blue-500 shadow-[0_0_10px_#3B82F6]"
+                              : "bg-white/5 border border-white/10 hover:bg-blue-500/10 hover:shadow-[0_0_6px_#3B82F6]"
+                          )
+                        : ""
+                    )}
+                  >
+                    <Target size={18} />
+                  </div>
+                  {!collapsed && <span className="text-sm">{plan.topic}</span>}
+                </Link>
+              );
 
-            return collapsed ? (
-              <Tooltip key={plan.id}>
-                <TooltipTrigger asChild>{link}</TooltipTrigger>
-                <TooltipContent side="right" sideOffset={6}>
-                  {plan.topic}
-                </TooltipContent>
-              </Tooltip>
-            ) : (
-              link
-            );
-          })}
+              return collapsed ? (
+                <Tooltip key={plan.id}>
+                  <TooltipTrigger asChild>{link}</TooltipTrigger>
+                  <TooltipContent side="right" sideOffset={6}>
+                    {plan.topic}
+                  </TooltipContent>
+                </Tooltip>
+              ) : (
+                link
+              );
+            })
+          )}
         </nav>
       </TooltipProvider>
     </aside>

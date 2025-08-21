@@ -9,6 +9,7 @@ import {
   studyHoursOptions,
   studyWeeksOptions,
 } from "@/lib/constants/constants";
+import AppLoader from "@/components/common/AppLoader";
 
 export default function GoalPage() {
   const router = useRouter();
@@ -127,6 +128,8 @@ export default function GoalPage() {
   // useEffect(() => {
   //   existingGoal();
   // }, []);
+
+  if (loading) return <AppLoader />;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 to-black flex items-center justify-center px-4">

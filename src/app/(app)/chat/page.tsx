@@ -6,29 +6,51 @@ import { ChatMessages } from "@/components/chat/ChatMessages";
 import { ChatPromptInput } from "@/components/chat/ChatPromptInput";
 import ChatSidebar from "@/components/chat/ChatSidebar";
 import { useSession } from "next-auth/react";
+import PlannerLoader from "@/components/common/PlannerLoader";
 export default function ChatPage() {
   const { data: session } = useSession();
-  const userId= session?.user?.id;
+  const userId = session?.user?.id;
   const [chats, setChats] = useState<any[]>([]);
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
 
   const [messages, setMessages] = useState<any[]>([]);
   const [showLoginHint, setShowLoginHint] = useState(false);
   const [titleUpdated, setTitleUpdated] = useState<boolean>(false);
+  const [loading, setLoading] = useState(true);
 
   const fetchChatsFromDb = async (userId: string) => {
-    const res = await fetch(`/api/chats?userId=${userId}`, { method: "GET" });
-    const result = await res.json();
-    let loadedChats = result?.data ?? [];
-    if (!Array.isArray(loadedChats)) {
-      console.warn("Expected chats array, got:", loadedChats);
-      loadedChats = [];
+    setLoading(true);
+    if (!userId) {
+      console.error("fetchChatsFromDb: userId is missing");
+      setLoading(false);
+      return;
     }
-    console.log("Fetched chats:", loadedChats);
-    const sortedChats = loadedChats.sort((a, b) => a.createdAt - b.createdAt);
-    setChats(sortedChats);
-    if (!activeChatId && sortedChats.length > 0) {
-      setActiveChatId(loadedChats[0].id);
+
+    try {
+      const res = await fetch(`/api/chats?userId=${userId}`, { method: "GET" });
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(`Failed to fetch chats: ${res.status} - ${errorText}`);
+      }
+      const result = await res.json();
+      let loadedChats = result?.data ?? [];
+      if (!Array.isArray(loadedChats)) {
+        console.warn("Expected chats array, got:", loadedChats);
+        loadedChats = [];
+      }
+      const sortedChats = loadedChats.sort(
+        (a, b) =>
+          new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+      );
+      setChats(sortedChats);
+      if (!activeChatId && sortedChats.length > 0) {
+        setActiveChatId(sortedChats[0].id);
+      }
+    } catch (err: any) {
+      console.error("Error fetching chats:", err);
+      setChats([]);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -100,12 +122,16 @@ export default function ChatPage() {
 
   return (
     <div className="flex h-full">
-      <ChatSidebar
-        chats={chats}
-        activeChatId={activeChatId}
-        setActiveChatId={setActiveChatId}
-        createNewChat={handleCreateNewChat}
-      />
+      {loading ? (
+        <PlannerLoader />
+      ) : (
+        <ChatSidebar
+          chats={chats}
+          activeChatId={activeChatId}
+          setActiveChatId={setActiveChatId}
+          createNewChat={handleCreateNewChat}
+        />
+      )}
       <div className="flex flex-col flex-1">
         <ChatHeader />
         <ChatMessages messages={messages} />
