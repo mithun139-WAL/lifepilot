@@ -23,6 +23,7 @@ export default function ChatSidebar({
       <button
         onClick={createNewChat}
         className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded-lg w-full"
+        style={{ cursor: "pointer" }}
       >
         <Plus size={18} />
         New Chat

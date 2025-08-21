@@ -1,3 +1,5 @@
+import * as React from "react";
+
 interface Props {
   messages: { role: string; content: string }[];
 }
@@ -15,6 +17,12 @@ function formatMessageForMarkdown(message: string): string {
 }
 
 export function ChatMessages({ messages }: Props) {
+  const endRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    endRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
   if (!Array.isArray(messages) || messages.length === 0) {
     return (
       <div className="flex-1 flex items-center justify-center text-slate-400">
@@ -46,6 +54,7 @@ export function ChatMessages({ messages }: Props) {
           )}
         </div>
       ))}
+      <div ref={endRef} />
     </div>
   );
 }

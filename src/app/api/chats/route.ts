@@ -24,11 +24,13 @@ export async function POST(request: Request) {
   }
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    const userId = request.nextUrl.searchParams.get("userId") as string;
     const chats = await prisma.chat.findMany({
       include: { messages: true },
       orderBy: { createdAt: "desc" },
+      where: { userId },
     });
 
     return Response.json({ success: true, data: chats }, { status: 200 });

@@ -5,16 +5,19 @@ import { ChatHeader } from "@/components/chat/ChatHeader";
 import { ChatMessages } from "@/components/chat/ChatMessages";
 import { ChatPromptInput } from "@/components/chat/ChatPromptInput";
 import ChatSidebar from "@/components/chat/ChatSidebar";
-
+import { useSession } from "next-auth/react";
 export default function ChatPage() {
+  const { data: session } = useSession();
+  const userId= session?.user?.id;
   const [chats, setChats] = useState<any[]>([]);
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
 
   const [messages, setMessages] = useState<any[]>([]);
   const [showLoginHint, setShowLoginHint] = useState(false);
+  const [titleUpdated, setTitleUpdated] = useState<boolean>(false);
 
-  const fetchChatsFromDb = async () => {
-    const res = await fetch("/api/chats", { method: "GET" });
+  const fetchChatsFromDb = async (userId: string) => {
+    const res = await fetch(`/api/chats?userId=${userId}`, { method: "GET" });
     const result = await res.json();
     let loadedChats = result?.data ?? [];
     if (!Array.isArray(loadedChats)) {
@@ -22,9 +25,9 @@ export default function ChatPage() {
       loadedChats = [];
     }
     console.log("Fetched chats:", loadedChats);
-
-    setChats(loadedChats);
-    if (!activeChatId && loadedChats.length > 0) {
+    const sortedChats = loadedChats.sort((a, b) => a.createdAt - b.createdAt);
+    setChats(sortedChats);
+    if (!activeChatId && sortedChats.length > 0) {
       setActiveChatId(loadedChats[0].id);
     }
   };
@@ -36,8 +39,8 @@ export default function ChatPage() {
   };
 
   useEffect(() => {
-    fetchChatsFromDb();
-  }, []);
+    fetchChatsFromDb(userId as string);
+  }, [setTitleUpdated, titleUpdated]);
 
   useEffect(() => {
     console.log("second", chats);
@@ -49,14 +52,13 @@ export default function ChatPage() {
     }
   }, [activeChatId]);
 
-  const fetchUserId = async () => {
-    const res = await fetch("/api/auth/session");
-    const data = await res.json();
-    return data.user.id;
-  };
+  // const fetchUserId = async () => {
+  //   const res = await fetch("/api/auth/session");
+  //   const data = await res.json();
+  //   return data.user.id;
+  // };
 
   const handleCreateNewChat = async () => {
-    const userId = await fetchUserId();
     const res = await fetch("/api/chats", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -64,20 +66,35 @@ export default function ChatPage() {
     });
     const chat = await res.json();
     setActiveChatId(chat.id);
-    await fetchChatsFromDb();
+    await fetchChatsFromDb(userId as string);
   };
-  const handlePromptSend = async () => {
-    setShowLoginHint(true);
-    if (activeChatId) {
-      await fetchMessagesForChat(activeChatId);
-      setShowLoginHint(false);
+
+  // Loader state for assistant
+  const [isAssistantLoading, setIsAssistantLoading] = useState(false);
+  const [loaderDots, setLoaderDots] = useState(1);
+  useEffect(() => {
+    let interval: NodeJS.Timeout | undefined;
+    if (isAssistantLoading) {
+      interval = setInterval(() => {
+        setLoaderDots((dots) => (dots + 1) % 4 || 1);
+      }, 500);
     } else {
-      setShowLoginHint(false);
+      setLoaderDots(1);
     }
+    return () => interval && clearInterval(interval);
+  }, [isAssistantLoading]);
+
+  const handlePromptSend = async (userMessage: string) => {
+    // Add user message immediately
+    setMessages((prev) => [...prev, { role: "user", content: userMessage }]);
+    setIsAssistantLoading(true);
+    setShowLoginHint(false);
   };
 
   const handleAssistantDone = async (chatId: string) => {
+    // Fetch messages from DB (should include the real AI response)
     await fetchMessagesForChat(chatId);
+    setIsAssistantLoading(false);
     setShowLoginHint(false);
   };
 
@@ -92,8 +109,10 @@ export default function ChatPage() {
       <div className="flex flex-col flex-1">
         <ChatHeader />
         <ChatMessages messages={messages} />
-        {showLoginHint && (
-          <div className="p-4 text-center text-slate-400">Loading...</div>
+        {isAssistantLoading && (
+          <div className="p-4 text-center text-slate-400 font-mono text-lg">
+            {Array(loaderDots).fill(".").join("")}
+          </div>
         )}
         <ChatPromptInput
           activeChatId={activeChatId}
@@ -103,6 +122,7 @@ export default function ChatPage() {
           onAssistantStream={() => {}}
           onChatsLoad={fetchChatsFromDb}
           onAssistantDone={handleAssistantDone}
+          setTitleUpdated={setTitleUpdated}
         />
       </div>
     </div>
