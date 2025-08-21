@@ -15,6 +15,7 @@ import {
   studyWeeksOptions,
 } from "@/lib/constants/constants";
 import { DateTimePickerForm } from "../ui/date-time-picker";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
 
 export default function AddGoalPopover({
   collapsed,
@@ -86,6 +87,7 @@ export default function AddGoalPopover({
       });
       if (res.ok) {
         setTitle("");
+        setGoalId(null);
         const data = await res.json();
         console.log("Plan generated:", data);
         setOpen(false);
@@ -101,17 +103,38 @@ export default function AddGoalPopover({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <button
-          className={`flex items-center w-full rounded-md px-3 py-2 bg-blue-700 hover:bg-slate-700 transition cursor-pointer ${
-            collapsed ? "justify-center" : "gap-2"
-          }`}
-          disabled={disabled}
-        >
-          <Plus size={18} />
-          {!collapsed && <span className="text-sm">Add Goal</span>}
-        </button>
-      </DialogTrigger>
+      {disabled ? (
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                className={`flex items-center w-full rounded-md px-3 py-2 bg-slate-800 text-gray-500 cursor-not-allowed ${
+                  collapsed ? "justify-center" : "gap-2"
+                }`}
+                disabled
+              >
+                <Plus size={18} />
+                {!collapsed && <span className="text-sm">Add Goal</span>}
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="right">
+              <p>Limit reached (max 5 goals)</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      ) : (
+        // 🔹 Normal active state with DialogTrigger
+        <DialogTrigger asChild>
+          <button
+            className={`flex items-center w-full rounded-md px-3 py-2 bg-blue-700 hover:bg-slate-700 transition ${
+              collapsed ? "justify-center" : "gap-2"
+            }`}
+          >
+            <Plus size={18} />
+            {!collapsed && <span className="text-sm">Add Goal</span>}
+          </button>
+        </DialogTrigger>
+      )}
 
       <DialogContent
         className="bg-slate-900 text-white border border-slate-700 rounded-xl p-6"

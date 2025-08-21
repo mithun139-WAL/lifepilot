@@ -26,7 +26,7 @@ export function Header() {
 
   return (
     <header className="h-16 bg-slate-950 text-white flex justify-between items-center px-6 shadow rounded-tr-2xl">
-      <h1 className="font-orbitron text-3xl text-cyan-400">LifePilot</h1>
+      <h1 className="font-orbitron text-3xl text-cyan-400">Personal AI Coach</h1>
 
       <DropdownMenu onOpenChange={(val) => setOpen(val)}>
         <DropdownMenuTrigger asChild>

@@ -1,5 +1,4 @@
 "use client";
-import { prisma } from "@/lib/prisma";
 import { Send } from "lucide-react";
 import { useEffect, useState } from "react";
 
@@ -12,6 +11,7 @@ interface ChatPromptInputProps {
   onAssistantDone?: (chatId: string) => void;
   setAssistantLoading?: (loading: boolean, chatId?: string) => void;
   setTitleUpdated?: (updated: boolean) => void;
+  messages: { role: string; content: string }[];
 }
 
 export function ChatPromptInput({
@@ -23,11 +23,11 @@ export function ChatPromptInput({
   onAssistantDone,
   setAssistantLoading,
   setTitleUpdated,
+  messages,
 }: ChatPromptInputProps) {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [loaderDots, setLoaderDots] = useState(0);
-  // ChatGPT-style loader animation
   useEffect(() => {
     if (!isLoading) return;
     const interval = setInterval(() => {
@@ -45,6 +45,7 @@ export function ChatPromptInput({
     });
     return res.json();
   };
+
   // update chat title
   const updateChatTitle = async (chatId: string, userMessage: string) => {
     const res = await fetch(`/api/chats/${chatId}`, {
@@ -54,6 +55,7 @@ export function ChatPromptInput({
     });
     return res.json();
   };
+
   // create new message in the chat
   const createNewMessage = async (
     chatId: string,
@@ -70,10 +72,12 @@ export function ChatPromptInput({
     });
     return res.json();
   };
+
   const getChatDetails = async (chatId: string) => {
     const res = await fetch(`/api/chats/${chatId}`, { method: "GET" });
     return res.json();
   };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim()) return;
@@ -81,9 +85,7 @@ export function ChatPromptInput({
     setInput("");
     let chatId = activeChatId;
     const chatDetails = await getChatDetails(chatId as string);
-    // ✅ Create new chat and assign new ID
     if (!chatDetails) {
-      // Create chat in DB and get its ID
       const chatRes = await createNewChat(userMessage);
       chatId = chatRes.id;
       if (chatId) {
@@ -96,7 +98,6 @@ export function ChatPromptInput({
         setTitleUpdated?.(true);
       }
     }
-    // Save user prompt to DB
     createNewMessage(chatId as string, "user", userMessage);
 
     if (chatId) {
@@ -114,12 +115,45 @@ export function ChatPromptInput({
     setLoaderDots(0);
     if (setAssistantLoading) setAssistantLoading(true, chatId as string);
 
+    const formattedHistory = messages
+      .map((m) => `${m.role === "user" ? "User" : "Assistant"}: ${m.content}`)
+      .join("\n");
+    console.log("Conversation so far:", formattedHistory);
+
     const res = await fetch("/api/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         chatId,
-        messages: [{ role: "user", content: userMessage }],
+        messages: [
+          {
+            role: "assistant",
+            content: `
+              You are a personal AI Agent coach. 
+              Always provide concise, professional, and empathetic answers. 
+              Maintain continuity of conversation based on the provided chat history. 
+              If information is missing, ask clarifying questions instead of assuming.
+        
+              Rules:
+              - Never repeat or restate the conversation history verbatim.
+              - Treat the conversation history ONLY as private context for reasoning.
+              - Do not include any formatting artifacts (e.g., \\, \`, JSON, brackets) unless explicitly asked.
+              - Always output clean, natural language only.
+              - Keep answers short, clear, and conversational.
+              - If unrelated to history, respond independently and naturally.
+              - If the user asks for structured output (JSON, table, etc.), follow that format strictly.
+            `,
+          },
+          {
+            role: "user",
+            content: `Conversation so far (last 5 minutes Q&A):
+              ${formattedHistory}
+              
+              Current user query:
+              ${userMessage}
+            `,
+          },
+        ],
       }),
     });
 
@@ -141,7 +175,6 @@ export function ChatPromptInput({
       }
     }
 
-    // Save LLM response to DB (use the same API route as user message)
     await createNewMessage(chatId as string, "assistant", assistantContent);
 
     setIsLoading(false);

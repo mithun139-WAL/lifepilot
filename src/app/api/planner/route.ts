@@ -132,17 +132,18 @@ export async function POST(req: NextRequest) {
                              "expectedTime": "1 hour"
                            }
                           ]
-                        "dueDate": "YYYY-MM-DD"
+                        "dueDate": "YYYY-MM-DDTHH:MM:SSZ"
                         "preferredTime": "YYYY-MM-DDTHH:MM:SSZ" // e.g. "2025-08-21T09:00:00Z"
                       }
                     ]
                   }
                   Rules:
                 - Each day must have 2–5 checklists.
+                - Total of expectedTime from checklists should not exceed ${hoursPerDay}.
                 - PreferredTime must be time that should be fetched from ${preferredTime} and add that time to the respective date.
                 - Tasks must directly support the milestone of that week.
                 - Keep descriptions short, actionable, and focused (1–2 lines max).
-                - Assign a dueDate (sequential inside the week).
+                - Assign a dueDate (sequential inside the week) and dueDate must be ${preferredTime}+${hoursPerDay}.
                 - Day 7 should always be Review & Self-Assessment of the week milestone.
                 - Do not overlap content across days; each task should build on the previous one,
                 - Keep the tone motivational but realistic`,

@@ -59,6 +59,7 @@ export const runtime = "edge";
 
 export async function POST(req: NextRequest) {
   const { messages } = await req.json();
+  console.log("Received messages:", messages);
 
   const encoder = new TextEncoder();
   const decoder = new TextDecoder();
@@ -75,7 +76,7 @@ export async function POST(req: NextRequest) {
           body: JSON.stringify({
             model: "openai/gpt-oss-20b",
             messages,
-            temperature: 0.6,
+            temperature: 0.4,
             max_tokens: 4096,
             top_p: 0.95,
             stream: true,

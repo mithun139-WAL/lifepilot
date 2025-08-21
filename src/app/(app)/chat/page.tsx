@@ -123,6 +123,7 @@ export default function ChatPage() {
           onChatsLoad={fetchChatsFromDb}
           onAssistantDone={handleAssistantDone}
           setTitleUpdated={setTitleUpdated}
+          messages={messages}
         />
       </div>
     </div>

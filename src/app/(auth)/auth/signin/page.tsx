@@ -18,7 +18,7 @@ export default function SignInPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 to-black flex items-center justify-center px-4">
       <div className="w-full max-w-sm bg-white/5 border border-white/10 backdrop-blur-xl rounded-2xl p-6 text-white shadow-[0_0_20px_#3B82F6]/20">
-        <h1 className="text-2xl font-bold text-center mb-6">Welcome to LifePilot</h1>
+        <h1 className="text-2xl font-bold text-center mb-6">Welcome to Personal AI Coach</h1>
         <p className="text-sm text-center mb-4 text-slate-400">
           Sign in to continue
         </p>

@@ -122,20 +122,7 @@ export function Sidebar({
           <div className="border-t border-slate-700 my-3" />
 
           <div className="px-2 mb-2">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <AddGoalPopover
-                  collapsed={collapsed}
-                  onPlanCreated={fetchPlans}
-                  disabled={plans.length >= 5}
-                />
-              </TooltipTrigger>
-              {plans.length >= 5 && (
-                <TooltipContent side="right">
-                  <p>Max of 5 Goals can be created</p>
-                </TooltipContent>
-              )}
-            </Tooltip>
+            <AddGoalPopover collapsed={collapsed} onPlanCreated={fetchPlans} disabled={plans.length >= 5} />
           </div>
 
           {/* Dynamic plans */}
