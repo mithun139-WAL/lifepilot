@@ -1,118 +1,266 @@
 "use client";
 
-import { useState } from "react";
 import { useTasks } from "@/context/TaskContext";
-import { CheckCircle, Circle, EllipsisVertical } from "lucide-react";
+import { MoreVertical } from "lucide-react";
+import { useState, useEffect } from "react";
 
 interface TaskListProps {
-  tasks: any[];
+  existingTasks: any[];
 }
-export function TaskList({
-  tasks = [],
-}: TaskListProps) {
-  const {setTasks, toggleStatus, deleteTask, openEditPopup,setOpenEditPopup, currentTask, setCurrentTask } = useTasks();
-  const [hoveredId, setHoveredId] = useState<number | null>(null);
-  const [menuOpenId, setMenuOpenId] = useState<number | null>(null);
-  
+
+export const TaskList: React.FC<TaskListProps> = ({ existingTasks }) => {
+  const {
+    tasks,
+    setTasks,
+    deleteTask,
+    toggleChecklistItem,
+    renameTask,
+    deleteChecklistItem,
+  } = useTasks();
+
+  const [menuOpen, setMenuOpen] = useState<{
+    type: "task" | "checklist";
+    id: number;
+  } | null>(null);
+
+  const [renamingId, setRenamingId] = useState<{
+    type: "task" | "checklist";
+    id: number;
+  } | null>(null);
+
+  const [newTitle, setNewTitle] = useState("");
+
+  useEffect(() => {
+    setTasks(existingTasks);
+  }, [existingTasks]);
+
+  const formatDueDate = (dueDate: string) => {
+    if (!dueDate) return null;
+
+    const date = new Date(dueDate);
+    const today = new Date();
+    const tomorrow = new Date();
+    tomorrow.setDate(today.getDate() + 1);
+    const yesterday = new Date();
+    yesterday.setDate(today.getDate() - 1);
+
+    const sameDay = (a: Date, b: Date) =>
+      a.getDate() === b.getDate() &&
+      a.getMonth() === b.getMonth() &&
+      a.getFullYear() === b.getFullYear();
+
+    let label = date.toLocaleDateString("en-US", {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+    });
+
+    if (sameDay(date, today)) label += " (Today)";
+    else if (sameDay(date, tomorrow)) label += " (Tomorrow)";
+    else if (sameDay(date, yesterday)) label += " (Yesterday)";
+
+    return label;
+  };
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-      {tasks.map((task) => {
-        const isCompleted = task?.status === "completed";
+    <div className="space-y-4">
+      {tasks.map((task) => (
+        <div
+          key={task.id}
+          className="p-4 bg-gray-800 rounded-lg border border-gray-700"
+        >
+          {/* Parent task row */}
+          <div className="flex justify-between items-start">
+            <div>
+              {renamingId?.type === "task" && renamingId?.id === task.id ? (
+                <input
+                  value={newTitle}
+                  onChange={(e) => setNewTitle(e.target.value)}
+                  onBlur={() => {
+                    renameTask(task.id, newTitle);
+                    setRenamingId(null);
+                  }}
+                  className="bg-gray-700 text-white px-2 py-1 rounded"
+                  autoFocus
+                />
+              ) : (
+                <h3
+                  className={`text-white font-medium ${task.status === "COMPLETED"
+                      ? "line-through text-gray-400"
+                      : ""
+                    }`}
+                >
+                  {task.title}
+                </h3>
+              )}
 
-        return (
-          <div
-            key={task?.id || task?.title}
-            className="bg-white/10 backdrop-blur-md border border-blue-500/20 rounded-xl p-4 shadow hover:shadow-lg transition relative"
-            onMouseEnter={() => setHoveredId(task?.id)}
-            onMouseLeave={() => {
-              setHoveredId(null);
-              setMenuOpenId(null);
-            }}
-          >
-            <div className="flex items-start gap-3">
-              {/* Status toggle */}
-              <button onClick={() => toggleStatus(task.id)} className="mt-1">
-                {isCompleted ? (
-                  <CheckCircle className="w-6 h-6 text-green-500" />
-                ) : hoveredId === task.id ? (
-                  <CheckCircle className="w-6 h-6 text-gray-400 hover:text-green-500" />
-                ) : (
-                  <Circle className="w-6 h-6 text-gray-400" />
-                )}
+              {/* Description */}
+              {task.description && (
+                <p className="text-sm text-gray-400 mt-1">
+                  {task.description}
+                </p>
+              )}
+
+              {/* Due Date */}
+              {task.dueDate && (
+                <p className="text-xs text-gray-500 mt-1">
+                  {formatDueDate(task.dueDate)}
+                </p>
+              )}
+            </div>
+
+            <div className="relative">
+              <button
+                onClick={() =>
+                  setMenuOpen(
+                    menuOpen?.id === task.id && menuOpen?.type === "task"
+                      ? null
+                      : { type: "task", id: task.id }
+                  )
+                }
+              >
+                <MoreVertical className="text-white w-5 h-5" />
               </button>
-
-              {/* Task content */}
-              <div className="flex-1">
-                <div className="flex justify-between items-start">
-                  <h3
-                    className={`font-semibold ${isCompleted
-                        ? "line-through text-gray-400"
-                        : "text-white"
-                      }`}
+              {menuOpen?.id === task.id && menuOpen?.type === "task" && (
+                <div className="absolute right-0 mt-2 w-28 bg-gray-700 text-white rounded shadow-lg z-10">
+                  <button
+                    onClick={() => {
+                      setRenamingId({ type: "task", id: task.id });
+                      setNewTitle(task.title);
+                      setMenuOpen(null);
+                    }}
+                    className="block w-full text-left px-3 py-1 hover:bg-gray-600"
                   >
-                    {task.title}
-                  </h3>
-
-                  {/* Ellipsis menu */}
-                  <div className="relative">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setMenuOpenId(menuOpenId === task.id ? null : task.id);
-                      }}
-                      className="p-1 rounded-full hover:bg-gray-700"
-                    >
-                      <EllipsisVertical className="w-5 h-5 text-gray-400" />
-                    </button>
-
-                    {menuOpenId === task.id && (
-                      <div className="absolute right-0 mt-1 w-28 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-20">
-                        <button
-                          onClick={() => {
-                            setMenuOpenId(null);
-                            setCurrentTask(task);
-                            setOpenEditPopup(true);
-                          }}
-                          className="w-full text-left px-3 py-2 text-sm text-white hover:bg-gray-700 rounded-t-lg"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => {
-                            setMenuOpenId(null);
-                            deleteTask(task.id);
-                          }}
-                          className="w-full text-left px-3 py-2 text-sm text-red-400 hover:bg-gray-700 rounded-b-lg"
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    )}
-                  </div>
+                    Rename
+                  </button>
+                  <button
+                    onClick={() => {
+                      deleteTask(task.id);
+                      setMenuOpen(null);
+                    }}
+                    className="block w-full text-left px-3 py-1 hover:bg-gray-600"
+                  >
+                    Delete
+                  </button>
                 </div>
-
-                {task.description && (
-                  <p
-                    className={`text-sm ${isCompleted
-                        ? "line-through text-gray-400"
-                        : "text-gray-300"
-                      }`}
-                  >
-                    {task.description}
-                  </p>
-                )}
-
-                {(task.startDate || task.startTime) && (
-                  <p className="text-xs text-gray-400 mt-1">
-                    {task.startDate} {task.startTime}
-                  </p>
-                )}
-              </div>
+              )}
             </div>
           </div>
-        );
-      })}
+
+          {/* Checklists */}
+          {task?.checklists && task.checklists?.length > 0 && (
+            <div className="mt-3 ml-4 space-y-3">
+              {task.checklists.map((check) => (
+                <div
+                  key={check.id}
+                  className="flex justify-between items-start group"
+                >
+                  <div
+                    className="flex items-start space-x-2 cursor-pointer"
+                    onClick={() => toggleChecklistItem(task.id, check.id)}
+                  >
+                    {/* Custom radio */}
+                    <div
+                      className={`w-5 h-5 rounded-full border flex items-center justify-center transition mt-1
+                        ${check.completedAt
+                          ? "bg-green-600 border-green-600"
+                          : "border-gray-400 group-hover:border-green-400"
+                        }`}
+                    >
+                      {check.completedAt && (
+                        <span className="text-white text-xs">✔</span>
+                      )}
+                    </div>
+
+                    <div>
+                      {/* Title */}
+                      {renamingId?.type === "checklist" &&
+                        renamingId?.id === check.id ? (
+                        <input
+                          value={newTitle}
+                          onChange={(e) => setNewTitle(e.target.value)}
+                          onBlur={() => {
+                            renameTask(check.id, newTitle, task.id);
+                            setRenamingId(null);
+                          }}
+                          className="bg-gray-700 text-white px-2 py-1 rounded text-sm"
+                          autoFocus
+                        />
+                      ) : (
+                        <span
+                          className={`text-sm block ${check.completedAt
+                              ? "line-through text-gray-400"
+                              : "text-white"
+                            }`}
+                        >
+                          {check.title}
+                        </span>
+                      )}
+
+                      {/* Description */}
+                      {check.description && (
+                        <p className="text-xs text-gray-400">
+                          {check.description}
+                        </p>
+                      )}
+
+                      {/* Expected time */}
+                      {check.expectedTime && (
+                        <p className="text-xs text-gray-500">
+                          ⏱ {check.expectedTime}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Ellipsis Menu */}
+                  <div className="relative opacity-0 group-hover:opacity-100 transition">
+                    <button
+                      onClick={() =>
+                        setMenuOpen(
+                          menuOpen?.id === check.id &&
+                            menuOpen?.type === "checklist"
+                            ? null
+                            : { type: "checklist", id: check.id }
+                        )
+                      }
+                    >
+                      <MoreVertical className="text-gray-300 w-4 h-4" />
+                    </button>
+                    {menuOpen?.id === check.id &&
+                      menuOpen?.type === "checklist" && (
+                        <div className="absolute right-0 mt-2 w-28 bg-gray-700 text-white rounded shadow-lg z-10">
+                          <button
+                            onClick={() => {
+                              setRenamingId({
+                                type: "checklist",
+                                id: check.id,
+                              });
+                              setNewTitle(check.title);
+                              setMenuOpen(null);
+                            }}
+                            className="block w-full text-left px-3 py-1 hover:bg-gray-600"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => {
+                              deleteChecklistItem(task.id, check.id);
+                              setMenuOpen(null);
+                            }}
+                            className="block w-full text-left px-3 py-1 hover:bg-gray-600"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      ))}
     </div>
   );
-}
+};

@@ -1,149 +1,69 @@
 "use client";
 
-import React, { useState } from "react";
-import { TaskProvider } from "@/context/TaskContext";
+import React, { useState, useEffect } from "react";
 import { TaskList } from "@/components/tasks/TaskList";
-import { TaskForm } from "@/components/tasks/TaskForm";
-
-const weeklyPlans = [
-  {
-    week: 1,
-    summary:
-      "Familiarize yourself with AWS console, EC2, S3, and IAM basics. Set up a free-tier account.",
-    milestone: "AWS Foundations and Console Navigation",
-    progress: 40,
-    tasks: [
-      {
-        day: 3,
-        title: "IAM Basics – Users, Groups, and Policies",
-        dueDate: "2025-08-23",
-        description:
-          "Create IAM users, groups, and attach policies. Understand least privilege.",
-        expectedTime: "2–3 hours",
-      },
-      {
-        day: 4,
-        title: "Explore Core Services – EC2, S3, RDS",
-        dueDate: "2025-08-24",
-        description:
-          "Launch EC2 instance, create an S3 bucket, provision RDS instance.",
-        expectedTime: "2–3 hours",
-      },
-      {
-        day: 5,
-        title: "Hands-on Lab: Deploy a Static Website",
-        dueDate: "2025-08-25",
-        description:
-          "Host a simple HTML page in S3, configure bucket policy for public access.",
-        expectedTime: "2–3 hours",
-      },
-      {
-        day: 6,
-        title: "S3 Practice",
-        dueDate: "2025-08-25",
-        description:
-          "Host a simple HTML page in S3, configure bucket policy for public access.",
-        expectedTime: "2–3 hours",
-      },
-    ],
-  },
-  {
-    week: 2,
-    summary:
-      "Deepen your understanding of AWS services and start building real-world applications.",
-    milestone: "AWS Services Deep Dive",
-    progress: 20,
-    tasks: [
-      {
-        day: 0,
-        title: "Kubernetes practice",
-        dueDate: "2025-08-23",
-        description:
-          "Kubernetes basics: Pods, Deployments, and Services.",
-        expectedTime: "2–3 hours",
-      },
-      {
-        day: 1,
-        title: "Node creation",
-        dueDate: "2025-08-24",
-        description:
-          "Node basics: Creation, scaling, and management.",
-        expectedTime: "2–3 hours",
-      },
-      {
-        day: 2,
-        title: "Service Creation",
-        dueDate: "2025-08-25",
-        description:
-          "Create and manage services in Kubernetes.",
-        expectedTime: "2–3 hours",
-      },
-      {
-        day: 3,
-        title: "Kubernetes Networking",
-        dueDate: "2025-08-25",
-        description:
-          "Understand Kubernetes networking concepts: Services, Ingress, and Network Policies.",
-        expectedTime: "2–3 hours",
-      },
-    ],
-  },
-];
-
-const habits = [
-  {
-    title: "Read a Daily AWS Blog Post",
-    frequency: "daily",
-    description:
-      "Spend 15 min reading AWS blog, service updates, or docs snippet.",
-  },
-  {
-    title: "Hands-On Lab",
-    frequency: "daily",
-    description: "Experiment with AWS console features daily.",
-  },
-  {
-    title: "Weekly AWS Quiz",
-    frequency: "weekly",
-    description: "Test yourself with a quiz or flashcards.",
-  },
-];
+import { TaskProvider } from "@/context/TaskContext";
+import { Ta } from "zod/v4/locales";
 
 // Days mapping
 const daysOfWeek = [
-  "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday",
+  "Day 1",
+  "Day 2",
+  "Day 3",
+  "Day 4",
+  "Day 5",
+  "Day 6",
+  "Day 7",
 ];
 interface PlannerPageProps {
-  plans?: any; // Adjust type as needed
   planId?: string;
 }
-const PlannerPage: React.FC<PlannerPageProps> = ({ plans, planId }) => {
+const PlannerPage: React.FC<PlannerPageProps> = ({ planId }) => {
   const [selectedWeek, setSelectedWeek] = useState<number | null>(null);
   const [selectedDay, setSelectedDay] = useState<number>(0); // 0=Sunday
-  console.log('planner details', plans?.planner);
-  console.log('task list', plans?.task_list);
-  console.log('habits_list', plans?.habits_list);
+  const [planDetails, setPlanDetails] = useState<any>(null);
+
+  const fetchPlanDetails = async () => {
+    if (!planId) return;
+    try {
+      const response = await fetch(`/api/learning-plans/${planId}`);
+      const data = await response.json();
+      console.log("Fetched plan details in Planner page:", data);
+      setPlanDetails(data);
+    } catch (error) {
+      console.error("Error fetching plan details:", error);
+    }
+  };
+
+  useEffect(() => {
+    console.log("Plan ID in Planner page:", planId);
+    if (planId) fetchPlanDetails();
+  }, [planId]);
+
+  console.log('weekly plan details', planDetails?.planners);
+
   return (
     <div className="space-y-4">
-      {weeklyPlans.map((plan) => (
+      {planDetails?.planners?.map((plan: any) => (
         <div
-          key={plan.week}
+          key={plan.id}
           className="bg-white/10 border border-blue-500/30 rounded-lg p-4 shadow hover:shadow-lg transition"
         >
           <div className="flex justify-between items-center">
             <div>
               <h3 className="text-xl font-semibold text-white">
-                Week {plan.week} – {plan.milestone}
+                Week {plan?.week} – {plan?.title}
               </h3>
-              <p className="text-gray-300 text-sm">{plan.summary}</p>
+              <p className="text-gray-300 text-sm">{plan?.description}</p>
             </div>
 
             <button
-              onClick={() =>
+              onClick={() => {
                 setSelectedWeek(
                   selectedWeek === plan.week ? null : plan.week
                 )
-              }
+                setSelectedDay(0)
+              }}
               className="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
             >
               {selectedWeek === plan.week ? "Close" : "View"}
@@ -178,15 +98,16 @@ const PlannerPage: React.FC<PlannerPageProps> = ({ plans, planId }) => {
               </div>
 
               {/* Tasks for Selected Day */}
+              {/* Tasks for Selected Day */}
               <h4 className="text-lg font-semibold text-white mt-4 mb-2">
                 📅 {daysOfWeek[selectedDay]} Tasks
               </h4>
               <div className="space-y-3">
-                {plan.tasks.filter((task) => task.day === selectedDay).length > 0 ? (
+                {plan.tasks && plan.tasks.length > 0 && plan.tasks[selectedDay] ? (
                   <TaskProvider>
-                    <TaskList tasks={plan.tasks.filter((task) => task.day === selectedDay)} />
-                    {/* <TaskForm /> */}
+                    <TaskList existingTasks={[plan.tasks[selectedDay]]} />
                   </TaskProvider>
+
                 ) : (
                   <p className="text-gray-400 text-sm">
                     No tasks for {daysOfWeek[selectedDay]}.
@@ -194,12 +115,13 @@ const PlannerPage: React.FC<PlannerPageProps> = ({ plans, planId }) => {
                 )}
               </div>
 
+
               {/* Habits */}
               <h4 className="text-lg font-semibold text-white mt-6 mb-2">
                 🧠 Habits
               </h4>
               <div className="grid md:grid-cols-2 gap-3">
-                {habits.map((habit, idx) => (
+                {planDetails?.habits?.map((habit: any, idx: number) => (
                   <div
                     key={idx}
                     className="p-3 bg-gray-800 rounded-lg border border-gray-700"

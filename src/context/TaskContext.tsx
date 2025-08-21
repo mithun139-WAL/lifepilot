@@ -2,14 +2,23 @@
 
 import { createContext, useContext, useEffect, useState } from "react";
 
+export type Checklist = {
+  id: number;
+  title: string;
+  completedAt?: string | null;
+  description?: string;
+  expectedTime?: string;
+};
+
 export type Task = {
   id: number;
   title: string;
-  status: "pending" | "completed";
+  status: "PENDING" | "COMPLETED";
   description?: string;
   dueDate?: string;
   startTime?: string;
   day?: number; // Optional, used for planner tasks
+  checklists?: Checklist[]; // ✅ Added
 };
 
 type TaskContextType = {
@@ -19,6 +28,12 @@ type TaskContextType = {
   deleteTask: (id: number) => void;
   toggleStatus: (id: number) => void;
   editTask: (id: number, newTask: Omit<Task, "id">) => void;
+  renameTask: (id: number, newTitle: string) => void;
+  // ✅ Checklist operations
+  addChecklistItem: (taskId: number, title: string) => void;
+  toggleChecklistItem: (taskId: number, checklistId: number) => void;
+  deleteChecklistItem: (taskId: number, checklistId: number) => void;
+
   openEditPopup: boolean;
   setOpenEditPopup: any;
   currentTask: Task | null;
@@ -32,25 +47,21 @@ export const TaskProvider = ({ children }: { children: React.ReactNode }) => {
   const [openEditPopup, setOpenEditPopup] = useState(false);
   const [currentTask, setCurrentTask] = useState<Task | null>(null);
 
-  // Load from localStorage on mount
-  useEffect(() => {
-    const stored = localStorage.getItem("lifePilotTasks");
-    if (stored) setTasks(JSON.parse(stored));
-  }, []);
 
-  // Save to localStorage on tasks change
+  // Save to localStorage
   useEffect(() => {
     localStorage.setItem("lifePilotTasks", JSON.stringify(tasks));
   }, [tasks]);
 
-  const addTask = ({title, description, dueDate,startTime}: {title: string; description: string; dueDate: string; startTime: string}) => {
+  const addTask = ({ title, description, dueDate, startTime }: { title: string; description: string; dueDate: string; startTime: string }) => {
     const newTask: Task = {
       id: Date.now(),
       title,
       description,
       dueDate,
       startTime,
-      status: "pending",
+      status: "PENDING",
+      checklists: [], // ✅ start with empty checklist
     };
     setTasks((prev) => [newTask, ...prev]);
   };
@@ -63,7 +74,7 @@ export const TaskProvider = ({ children }: { children: React.ReactNode }) => {
     setTasks((prev) =>
       prev.map((task) =>
         task.id === id
-          ? { ...task, status: task.status === "pending" ? "completed" : "pending" }
+          ? { ...task, status: task.status === "PENDING" ? "COMPLETED" : "PENDING" }
           : task
       )
     );
@@ -75,10 +86,79 @@ export const TaskProvider = ({ children }: { children: React.ReactNode }) => {
     );
   };
 
+  const renameTask = (id: number, newTitle: string) => {
+    setTasks((prev) =>
+      prev.map((task) => (task.id === id ? { ...task, title: newTitle } : task))
+    );
+  };
+
+  // ✅ Checklist ops
+  const addChecklistItem = (taskId: number, title: string) => {
+    setTasks((prev) =>
+      prev.map((task) =>
+        task.id === taskId
+          ? {
+            ...task,
+            checklists: [
+              ...(task.checklists || []),
+              { id: Date.now(), title, completedAt: null },
+            ],
+          }
+          : task
+      )
+    );
+  };
+
+  const toggleChecklistItem = (taskId: number, checklistId: number) => {
+    setTasks((prev) =>
+      prev.map((task) =>
+        task.id === taskId
+          ? {
+            ...task,
+            checklists: task.checklists?.map((item) =>
+              item.id === checklistId
+                ? {
+                  ...item,
+                  completedAt: item.completedAt ? null : new Date().toISOString(),
+                }
+                : item
+            ),
+          }
+          : task
+      )
+    );
+  };
+
+  const deleteChecklistItem = (taskId: number, checklistId: number) => {
+    setTasks((prev) =>
+      prev.map((task) =>
+        task.id === taskId
+          ? {
+            ...task,
+            checklists: task.checklists?.filter((item) => item.id !== checklistId),
+          }
+          : task
+      )
+    );
+  };
+
   return (
     <TaskContext.Provider
       value={{
-        tasks, setTasks, addTask, deleteTask, toggleStatus, editTask, openEditPopup, setOpenEditPopup, currentTask, setCurrentTask
+        tasks,
+        setTasks,
+        addTask,
+        deleteTask,
+        toggleStatus,
+        editTask,
+        renameTask,
+        addChecklistItem,
+        toggleChecklistItem,
+        deleteChecklistItem,
+        openEditPopup,
+        setOpenEditPopup,
+        currentTask,
+        setCurrentTask,
       }}
     >
       {children}
