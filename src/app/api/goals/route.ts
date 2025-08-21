@@ -14,7 +14,7 @@ export async function GET() {
     const goals = await prisma.goal.findMany({
       where: { userId: session.user.id },
       include: {
-        planners: true,
+        learningPlan: true,
       },
       orderBy: { createdAt: "desc" },
     });
