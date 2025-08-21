@@ -259,11 +259,14 @@ export async function POST(req: NextRequest) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           userId: session?.user?.id,
+          accessToken: session?.accessToken,
+          refreshToken: session?.refreshToken,
           topic: title,
           planner: roadmap.planner,
           task_list: tasks,
           habits_list: habits?.habits || [],
           goalId: goal.id,
+          hoursPerDay: goal.hoursPerDay
         }),
       }
     );

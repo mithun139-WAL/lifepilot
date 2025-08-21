@@ -1,4 +1,5 @@
 import { HabitFrequency } from "@/generated/prisma";
+import { createGoogleCalendarEvent } from "@/lib/googleCalendar";
 import { prisma } from "@/lib/prisma";
 
 interface Habit {
@@ -25,7 +26,8 @@ interface Task {
 // Create a new learning plan
 export async function POST(request: Request) {
   try {
-    const { userId, topic, planner, task_list, habits_list, goalId } = await request.json();
+
+    const { userId, topic, planner, task_list, habits_list, goalId, accessToken, refreshToken } = await request.json();
 
     if (!userId || !topic || !goalId) {
       return new Response(JSON.stringify({ error: "userId, topic, and goalId are required" }), { status: 400 });
@@ -83,6 +85,19 @@ export async function POST(request: Request) {
           },
           preferredTime: task.preferredTime ? new Date(task.preferredTime).toISOString() : null,
         }));
+
+        await Promise.all(
+          tasksData.map((task: (typeof tasksData)[number]) =>
+            createGoogleCalendarEvent({
+              accessToken: accessToken,
+              refreshToken: refreshToken,
+              summary: task.title,
+              description: task.description,
+              start: task.preferredTime,
+              end: task.dueDate,
+            })
+          )
+        );
 
         const plannerEntry = {
           userId,
