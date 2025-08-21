@@ -7,6 +7,21 @@ interface Habit {
   description: string;
 }
 
+interface Task {
+  week: number;
+  tasks: {
+    title: string;
+    description?: string;
+    dueDate?: string;
+    checklists?: {
+      title: string;
+      description?: string;
+      expectedTime?: number;
+    }[];
+    preferredTime?: string;
+  }[];
+}
+
 // Create a new learning plan
 export async function POST(request: Request) {
   try {
@@ -27,7 +42,7 @@ export async function POST(request: Request) {
       },
     });
 
-    const promises: Promise<any>[] = [];
+    const promises: Promise<unknown>[] = [];
     if (habits_list?.length) {
       const habitsList = habits_list
         .map((habit: Habit) => ({
@@ -49,22 +64,24 @@ export async function POST(request: Request) {
     }
     if (planner?.length) {
       for (const plan of planner) {
+
         const relatedTasks = task_list?.find(
-          (task: any) => task.week === plan.week
+          (task: Task) => task.week === plan.week
         )?.tasks ?? [];
 
-        const tasksData = relatedTasks.map((task: any) => ({
+        const tasksData = relatedTasks.map((task: Task["tasks"][number]) => ({
           userId,
           title: task.title,
           description: task.description ?? null,
           dueDate: task.dueDate ? new Date(task.dueDate).toISOString() : null,
           checklists: {
-            create: task.checklists?.map((item: any) => ({
+            create: task.checklists?.map((item) => ({
               title: item.title,
               description: item.description ?? null,
               expectedTime: item.expectedTime ?? null,
             })) ?? [],
-          }
+          },
+          preferredTime: task.preferredTime ? new Date(task.preferredTime).toISOString() : null,
         }));
 
         const plannerEntry = {
@@ -73,6 +90,8 @@ export async function POST(request: Request) {
           title: plan.milestone,
           description: plan.summary ?? null,
           week: Number(plan.week),
+          startDate: plan.startDate ? new Date(plan.startDate).toISOString() : null,
+          endDate: plan.endDate ? new Date(plan.endDate).toISOString() : null,
           tasks: { create: tasksData }
         };
 

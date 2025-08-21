@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
     return new Response("Goal not found", { status: 404 });
   }
 
-  const { title, hoursPerDay, targetWeeks } = goal;
+  const { title, hoursPerDay, targetWeeks, preferredTime } = goal;
   try {
     const roadmapRes = await fetch(
       "https://api.groq.com/openai/v1/chat/completions",
@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
             },
             {
               role: "user",
-              content: `You are an expert learning planner. Create a ${targetWeeks} week roadmap for this learning goal: ${title} spending ${hoursPerDay} a day.
+              content: `You are an expert learning planner. Create a ${targetWeeks} week roadmap for this learning goal: ${title} spending ${hoursPerDay} a day starting from ${preferredTime}.
                 Break into weeks with milestones only (no tasks yet). 
                 Output only a stringified JSON object. Do not include any text outside the JSON. Do NOT include any prefix, labels, or explanatory text. Start immediately with '{'. 
                 Example:
@@ -55,7 +55,9 @@ export async function POST(req: NextRequest) {
                     { 
                     "week": , 
                      "milestone": "...", 
-                     "summary": "..." 
+                     "summary": "...",
+                     "startDate": "YYYY-MM-DD",
+                     "endDate": "YYYY-MM-DD" 
                      }, 
                   ]
                 } 
@@ -64,7 +66,9 @@ export async function POST(req: NextRequest) {
                 - Keep milestones progressive (from basics → advanced).
                 - Limit summary to 2–3 sentences.
                 - Everything must be in planner, no extras needed other than that.
-                - Do NOT include daily tasks here (that comes later).,
+                - Do NOT include daily tasks here (that comes later).
+                - Do NOT include any other variables outside the planner.
+                - Every week startDate and endDate should be sequential e.g. week 1: 2025-08-21 to 2025-08-27, week 2: 2025-08-28 to 2025-09-03.
                `,
             },
           ],
@@ -106,7 +110,7 @@ export async function POST(req: NextRequest) {
               },
               {
                 role: "user",
-                content: `You are an expert tutor. For the goal '${title}', generate detailed tasks for Week ${week.week} with milestone: ${week.milestone}.
+                content: `You are an expert tutor. For the goal '${title}', generate detailed tasks for Week ${week.week} i.e from ${week.startDate} to ${week.endDate} with milestone: ${week.milestone}.
                   Break down the milestone into daily tasks.
                   Output only a stringified JSON object. Do not include any text outside the JSON. Do NOT include any prefix, labels, or explanatory text. Start immediately with '{'.
                   {
@@ -129,11 +133,13 @@ export async function POST(req: NextRequest) {
                            }
                           ]
                         "dueDate": "YYYY-MM-DD"
+                        "preferredTime": "YYYY-MM-DDTHH:MM:SSZ" // e.g. "2025-08-21T09:00:00Z"
                       }
                     ]
                   }
                   Rules:
                 - Each day must have 2–5 checklists.
+                - PreferredTime must be time that should be fetched from ${preferredTime} and add that time to the respective date.
                 - Tasks must directly support the milestone of that week.
                 - Keep descriptions short, actionable, and focused (1–2 lines max).
                 - Assign a dueDate (sequential inside the week).
@@ -220,7 +226,8 @@ export async function POST(req: NextRequest) {
               }
               Rules:
               - Each habit must be recurring.
-              - Keep them simple, motivating, and supportive of the main goal.
+              - Keep in mind that these are microhabits that help people to acheive something eliminating procastination.
+              - Keep them simple, motivating, and supportive in order to eliminate laziness.
               - At least 3 habits.
               - Frequencies should be either 'daily' or 'weekly'.`,
             },
