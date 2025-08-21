@@ -4,6 +4,11 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowRight } from "lucide-react";
 import { DateTimePickerForm } from "@/components/ui/date-time-picker";
+import CustomSelect from "@/components/common/CustomSelect";
+import {
+  studyHoursOptions,
+  studyWeeksOptions,
+} from "@/lib/constants/constants";
 
 export default function GoalPage() {
   const router = useRouter();
@@ -22,6 +27,14 @@ export default function GoalPage() {
     }
   };
 
+  const handleHoursPerDayChange = (val: string) => {
+    setHoursPerDay(val);
+  };
+
+  const handleTargetWeeksChange = (val: string) => {
+    setTargetWeeks(val);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -32,7 +45,7 @@ export default function GoalPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           title,
-          hoursPerDay: Number(hoursPerDay),
+          hoursPerDay: hoursPerDay,
           targetWeeks: Number(targetWeeks),
           preferredTime: preferredTime
             ? new Date(preferredTime).toISOString()
@@ -143,46 +156,48 @@ export default function GoalPage() {
 
         {step === "details" && (
           <form onSubmit={handleSubmit} className="space-y-4">
-            <h1 className="text-2xl font-bold text-center mb-6 capitalize">{title}</h1>
-            <div>
-              <label className="block font-medium">
-                How many hours you can spend?
-              </label>
-              <input
-                type="number"
-                value={hoursPerDay}
-                onChange={(e) => setHoursPerDay(e.target.value)}
-                placeholder="e.g. 2"
-                className="bg-transparent text-white outline-none placeholder:text-slate-400 border border-blue-500/30 rounded-xl px-4 py-3 w-full"
-                required
-              />
+            <h1 className="text-2xl font-bold text-center mb-6 capitalize">
+              {title}
+            </h1>
+            <div className="flex flex-col justify-between h-100">
+              <div>
+                <label className="block font-medium mb-2">Duration</label>
+                <CustomSelect
+                  value={targetWeeks}
+                  onChange={handleTargetWeeksChange}
+                  options={studyWeeksOptions}
+                  placeholder="Select duration (in weeks)"
+                />
+              </div>
+              <div>
+                <label className="block font-medium mb-2">
+                  How many hours you can spend?
+                </label>
+                <CustomSelect
+                  value={hoursPerDay}
+                  onChange={handleHoursPerDayChange}
+                  options={studyHoursOptions}
+                  placeholder="Select study duration"
+                />
+              </div>
+              <div>
+                <label className="block font-medium mb-2">
+                  Preferred Start Time
+                </label>
+                <DateTimePickerForm
+                  value={preferredTime}
+                  onChange={(val) => setPreferredTime(val)}
+                />
+                <p className="text-xs text-zinc-400 text-right mt-1">Enter time when you want to start in a day</p>
+              </div>
+              <button
+                type="submit"
+                className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 cursor-pointer"
+                disabled={loading}
+              >
+                {loading ? "Saving..." : "Save Goal"}
+              </button>
             </div>
-            <div>
-              <label className="block font-medium">Duration (in weeks)</label>
-              <input
-                type="number"
-                value={targetWeeks}
-                onChange={(e) => setTargetWeeks(e.target.value)}
-                placeholder="e.g. 4"
-                className="bg-transparent text-white outline-none placeholder:text-slate-400 border border-blue-500/30 rounded-xl px-4 py-3 w-full"
-                required
-              />
-            </div>
-            <div>
-              <label className="block font-medium">Preferred Start Time</label>
-              <DateTimePickerForm
-                value={preferredTime}
-                onChange={(val) => setPreferredTime(val)}
-                required
-              />
-            </div>
-            <button
-              type="submit"
-              className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 cursor-pointer"
-              disabled={loading}
-            >
-              {loading ? "Saving..." : "Save Goal"}
-            </button>
           </form>
         )}
 

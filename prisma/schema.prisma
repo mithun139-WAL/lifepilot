@@ -68,7 +68,7 @@ model Goal {
   title          String
   createdAt      DateTime      @default(now())
   userId         String
-  hoursPerDay    Int
+  hoursPerDay    String
   targetWeeks    Int
   preferredTime  DateTime      @default(dbgenerated("CURRENT_DATE + interval '10 hours'"))
   updatedAt      DateTime      @default(now())
