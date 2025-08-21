@@ -64,19 +64,17 @@ model VerificationToken {
 }
 
 model Goal {
-  id             String        @id @default(cuid())
-  title          String
-  createdAt      DateTime      @default(now())
-  userId         String
-  hoursPerDay    String
-  targetWeeks    Int
-  preferredTime  DateTime      @default(dbgenerated("CURRENT_DATE + interval '10 hours'"))
-  updatedAt      DateTime      @default(now())
-  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  habits         Habit[]
-  planners       Planner[]
-  learningPlanId String?       @unique
-  learningPlan   LearningPlan?
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title         String
+  hoursPerDay   String
+  targetWeeks   Int
+  preferredTime DateTime @default(dbgenerated("CURRENT_DATE + interval '10 hours'"))
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @default(now())
+
+  learningPlan LearningPlan?
 
   @@index([userId])
 }
@@ -84,44 +82,40 @@ model Goal {
 model Planner {
   id             String       @id @default(cuid())
   userId         String
-  goalId         String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   learningPlanId String
+  learningPlan   LearningPlan @relation(fields: [learningPlanId], references: [id], onDelete: Cascade)
   title          String
   description    String?
+  week           Int
   startDate      DateTime?
   endDate        DateTime?
-  roadmap        Json?
+  progress       Int          @default(0)
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @default(now())
-  progress       Int          @default(0)
-  goal           Goal         @relation(fields: [goalId], references: [id], onDelete: Cascade)
-  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  learningPlan   LearningPlan @relation(fields: [learningPlanId], references: [id], onDelete: Cascade)
-  tasks          Task[]
+
+  tasks Task[]
 
   @@index([userId])
-  @@index([goalId])
   @@index([startDate, endDate])
 }
 
 model Task {
-  id             String     @id @default(cuid())
-  userId         String
-  plannerId      String
-  learningPlanId String
-  title          String
-  description    String?
-  dueDate        DateTime?
-  preferredTime  DateTime   @default(dbgenerated("CURRENT_DATE + interval '10 hours'"))
-  createdAt      DateTime   @default(now())
-  updatedAt      DateTime   @default(now())
-  completedAt    DateTime?
-  status         TaskStatus @default(PENDING)
+  id            String     @id @default(cuid())
+  userId        String
+  user          User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plannerId     String
+  planner       Planner    @relation(fields: [plannerId], references: [id], onDelete: Cascade)
+  title         String
+  status        TaskStatus @default(PENDING)
+  description   String?
+  dueDate       DateTime?
+  preferredTime DateTime   @default(dbgenerated("CURRENT_DATE + interval '10 hours'"))
+  completedAt   DateTime?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @default(now())
 
-  planner      Planner      @relation(fields: [plannerId], references: [id], onDelete: Cascade)
-  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  learningPlan LearningPlan @relation(fields: [learningPlanId], references: [id], onDelete: Cascade)
-  checklists   Checklist[]
+  checklists Checklist[]
 
   @@index([plannerId])
   @@index([userId])
@@ -130,33 +124,31 @@ model Task {
 model Checklist {
   id           String     @id @default(cuid())
   taskId       String
+  task         Task       @relation(fields: [taskId], references: [id], onDelete: Cascade)
   title        String
+  status       TaskStatus @default(PENDING)
   description  String?
   expectedTime String? // storing as string like "1 hour" (can change to Int for minutes if you prefer)
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @default(now())
-  status       TaskStatus @default(PENDING)
-
-  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
 
   @@index([taskId])
 }
 
 model Habit {
-  id             String          @id @default(cuid())
-  goalId         String
-  learningPlanId String
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @default(now())
-  description    String?
-  name           String
-  progress       Int             @default(0)
+  id             String         @id @default(cuid())
   userId         String
-  frequency      HabitFrequency  @default(DAILY)
-  Goal           Goal?           @relation(fields: [goalId], references: [id], onDelete: Cascade)
-  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  learningPlan   LearningPlan    @relation(fields: [learningPlanId], references: [id], onDelete: Cascade)
-  completions    HabitProgress[]
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  learningPlanId String
+  learningPlan   LearningPlan   @relation(fields: [learningPlanId], references: [id], onDelete: Cascade)
+  name           String
+  description    String?
+  progress       Int            @default(0)
+  frequency      HabitFrequency @default(DAILY)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @default(now())
+
+  completions HabitProgress[]
 
   @@index([userId])
 }
@@ -164,11 +156,11 @@ model Habit {
 model HabitProgress {
   id        String   @id @default(cuid())
   habitId   String
+  habit     Habit    @relation(fields: [habitId], references: [id], onDelete: Cascade)
   date      DateTime
   completed Boolean  @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now())
-  habit     Habit    @relation(fields: [habitId], references: [id], onDelete: Cascade)
 
   @@unique([habitId, date])
   @@index([date])
@@ -205,19 +197,18 @@ enum HabitFrequency {
 }
 
 model LearningPlan {
-  id          String    @id @default(cuid())
+  id          String   @id @default(cuid())
   userId      String
-  goalId      String    @unique
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  goalId      String   @unique
+  goal        Goal     @relation(fields: [goalId], references: [id], onDelete: Cascade)
   topic       String
   planner     Json
   task_list   Json
   habits_list Json
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  planners    Planner[]
-  tasks       Task[]
-  habits      Habit[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  goal Goal @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  planners Planner[]
+  habits   Habit[]
 }

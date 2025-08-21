@@ -2,10 +2,23 @@ import { prisma } from "@/lib/prisma";
 import { NextRequest } from "next/server";
 
 // Get one plan
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(req: NextRequest, context: { params: { id: string } }) {
   try {
+    const { id } = await context.params;
     const plan = await prisma.learningPlan.findUnique({
-      where: { id: params.id },
+      where: { id },
+      include: {
+        planners: {
+          include: {
+            tasks: {
+              include: {
+                checklists: true,
+              },
+            },
+          },
+        },
+        habits: true,
+      }
     });
 
     if (!plan) {
