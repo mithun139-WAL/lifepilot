@@ -133,7 +133,7 @@ export default function GoalPage() {
       <div className="w-full max-w-sm bg-white/5 border border-white/10 backdrop-blur-xl rounded-2xl p-6 text-white shadow-[0_0_20px_#3B82F6]/20">
         {step === "title" && (
           <>
-            <h1 className="text-2xl font-bold text-center mb-6">
+            <h1 className="text-2xl font-bold text-center mb-6 capitalize">
               What’s Your Goal?
             </h1>
             <div className="flex items-center gap-2">

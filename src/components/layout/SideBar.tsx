@@ -4,13 +4,11 @@ import { cn } from "@/lib/utils";
 import {
   Home,
   Bot,
-  Calendar,
   Target,
   BarChart,
   Settings,
   ChevronLeft,
   ChevronRight,
-  ListTodo,
 } from "lucide-react";
 import {
   Tooltip,
@@ -19,6 +17,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useEffect, useState } from "react";
+import AddGoalPopover from "../common/GoalPopover";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: Home },
@@ -55,8 +54,6 @@ export function Sidebar({
   useEffect(() => {
     fetchPlans();
   }, []);
-
-  // console.log("Plans fetched:", plans);
 
   return (
     <aside
@@ -123,6 +120,23 @@ export function Sidebar({
             );
           })}
           <div className="border-t border-slate-700 my-3" />
+
+          <div className="px-2 mb-2">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <AddGoalPopover
+                  collapsed={collapsed}
+                  onPlanCreated={fetchPlans}
+                  disabled={plans.length >= 5}
+                />
+              </TooltipTrigger>
+              {plans.length >= 5 && (
+                <TooltipContent side="right">
+                  <p>Max of 5 Goals can be created</p>
+                </TooltipContent>
+              )}
+            </Tooltip>
+          </div>
 
           {/* Dynamic plans */}
           {plans.map((plan) => {

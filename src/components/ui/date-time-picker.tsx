@@ -53,6 +53,7 @@ export function DateTimePickerForm({
   }
 
   function handleTimeChange(type: "hour" | "minute" | "ampm", val: string) {
+    const now = new Date();
     const currentDate = form.getValues("time") || new Date();
     const newDate = new Date(currentDate);
 
@@ -67,6 +68,13 @@ export function DateTimePickerForm({
       if (val === "PM" && hours < 12) newDate.setHours(hours + 12);
     }
 
+    if (
+      newDate.toDateString() === now.toDateString() &&
+      newDate.getTime() < now.getTime()
+    ) {
+      return;
+    }
+
     form.setValue("time", newDate);
     onChange(newDate.toISOString());
   }
@@ -78,7 +86,7 @@ export function DateTimePickerForm({
         name="time"
         render={({ field }) => (
           <FormItem className="flex flex-col">
-            <Popover>
+            <Popover modal={true} >
               <PopoverTrigger asChild>
                 <FormControl>
                   <Button
@@ -96,13 +104,14 @@ export function DateTimePickerForm({
                   </Button>
                 </FormControl>
               </PopoverTrigger>
-              <PopoverContent className="w-auto p-0">
+              <PopoverContent className="w-auto p-0 z-[9999]" side="bottom" align="start">
                 <div className="sm:flex">
                   <Calendar
                     mode="single"
                     selected={field.value}
                     onSelect={handleDateSelect}
                     initialFocus
+                    disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
                   />
                   <div className="flex flex-col sm:flex-row sm:h-[300px] divide-y sm:divide-y-0 sm:divide-x">
                     {/* Hours */}
@@ -123,6 +132,11 @@ export function DateTimePickerForm({
                               className="sm:w-full shrink-0 aspect-square"
                               onClick={() =>
                                 handleTimeChange("hour", hour.toString())
+                              }
+                              disabled={
+                                field.value &&
+                                field.value.toDateString() === new Date().toDateString() &&
+                                new Date().getHours() > (hour % 12)
                               }
                             >
                               {hour}
