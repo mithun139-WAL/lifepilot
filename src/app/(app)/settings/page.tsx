@@ -172,7 +172,11 @@ const SettingsPage = () => {
                     <span>{goal.title}</span>
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
-                        <Button variant="destructive" size="sm">
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          className="bg-[oklch(0.37_0.13_23.78)] hover:bg-[oklch(0.47_0.13_23.78)]"
+                        >
                           Delete
                         </Button>
                       </AlertDialogTrigger>
@@ -181,7 +185,7 @@ const SettingsPage = () => {
                           <AlertDialogTitle className="text-cyan-400">
                             Delete Goal ?
                           </AlertDialogTitle>
-                          <AlertDialogDescription className="text-red-600">
+                          <AlertDialogDescription className="text-white">
                             Deleting <b>{goal.title}</b> will also delete the
                             entire associated Learning Plan. This action cannot
                             be undone.
@@ -193,7 +197,7 @@ const SettingsPage = () => {
                           </AlertDialogCancel>
                           <AlertDialogAction
                             onClick={() => deleteGoal(goal.id)}
-                            className="bg-red-600 hover:bg-red-700"
+                            className="bg-[oklch(0.37_0.13_23.78)] hover:bg-[oklch(0.47_0.13_23.78)]"
                           >
                             Delete
                           </AlertDialogAction>
@@ -217,7 +221,11 @@ const SettingsPage = () => {
                     <span>{plan.topic}</span>
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
-                        <Button variant="destructive" size="sm">
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          className="bg-[oklch(0.37_0.13_23.78)] hover:bg-[oklch(0.47_0.13_23.78)]"
+                        >
                           Delete
                         </Button>
                       </AlertDialogTrigger>
@@ -226,7 +234,7 @@ const SettingsPage = () => {
                           <AlertDialogTitle className="text-cyan-400">
                             Delete Learning Plan ?
                           </AlertDialogTitle>
-                          <AlertDialogDescription className="text-red-600">
+                          <AlertDialogDescription className="text-white">
                             Deleting <b>{plan.topic}</b> cannot be undone.
                           </AlertDialogDescription>
                         </AlertDialogHeader>
@@ -236,7 +244,7 @@ const SettingsPage = () => {
                           </AlertDialogCancel>
                           <AlertDialogAction
                             onClick={() => deletePlan(plan.id)}
-                            className="bg-red-600 hover:bg-red-700"
+                            className="bg-[oklch(0.37_0.13_23.78)] hover:bg-[oklch(0.47_0.13_23.78)]"
                           >
                             Delete
                           </AlertDialogAction>
