@@ -75,7 +75,7 @@ export const TaskList: React.FC<TaskListProps> = ({ existingTasks }) => {
         >
           {/* Parent task row */}
           <div className="flex justify-between items-start">
-            <div>
+            <div className="flex flex-col" style={{width: "100%"}}>
               <div className="flex items-center justify-between">
                 <div>
                   <h3

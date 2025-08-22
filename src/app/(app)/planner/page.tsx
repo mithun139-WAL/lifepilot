@@ -51,7 +51,7 @@ const PlannerPage: React.FC<PlannerPageProps> = ({ planId }) => {
   console.log("weekly plan details", planDetails?.planners);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 mt-[10px]">
       {planDetails?.planners?.map((plan: any) => (
         <div
           key={plan.id}
