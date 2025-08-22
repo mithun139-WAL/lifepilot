@@ -86,19 +86,22 @@ export async function POST(request: Request) {
           preferredTime: task.preferredTime ? new Date(task.preferredTime).toISOString() : null,
         }));
 
-        await Promise.all(
-          tasksData.map((task: (typeof tasksData)[number]) =>
-            createGoogleCalendarEvent({
+        const tasksDataWithEvents = await Promise.all(
+          tasksData.map(async (task: (typeof tasksData)[number]) => {
+            const event = await createGoogleCalendarEvent({
               accessToken: accessToken,
               refreshToken: refreshToken,
               summary: task.title,
               description: task.description,
               start: task.preferredTime,
               end: task.dueDate,
-            })
-          )
+            });
+            return {
+              ...task,
+              googleCalendarEventId: event.id,
+            };
+          })
         );
-
         const plannerEntry = {
           userId,
           learningPlanId: learningPlan.id,
@@ -107,7 +110,7 @@ export async function POST(request: Request) {
           week: Number(plan.week),
           startDate: plan.startDate ? new Date(plan.startDate).toISOString() : null,
           endDate: plan.endDate ? new Date(plan.endDate).toISOString() : null,
-          tasks: { create: tasksData }
+          tasks: { create: tasksDataWithEvents },
         };
 
         promises.push(prisma.planner.create({ data: plannerEntry }));

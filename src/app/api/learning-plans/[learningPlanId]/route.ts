@@ -1,5 +1,8 @@
+import { authOptions } from "@/lib/auth";
+import { deleteGoogleCalendarEvent } from "@/lib/googleCalendar";
 import { prisma } from "@/lib/prisma";
-import { NextRequest } from "next/server";
+import { getServerSession } from "next-auth";
+import { NextRequest, NextResponse } from "next/server";
 
 // Get one plan
 export async function GET(
@@ -73,6 +76,32 @@ export async function DELETE(
   { params }: { params: { learningPlanId: string } }
 ) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { success: false, error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+
+    const learningPlan = await prisma.learningPlan.findUnique({
+      where: { id: params.learningPlanId },
+      include: {
+        planners: {
+          include: {
+            tasks: true,
+          }
+        }
+      }
+    });
+    const googleCalendarEventIds = learningPlan?.planners.flatMap(planner =>
+      planner.tasks.map(task => task.googleCalendarEventId)
+    );
+
+    await Promise.all((googleCalendarEventIds ?? []).map(eventId => {
+      return deleteGoogleCalendarEvent({ accessToken: session.accessToken as string, refreshToken: session.refreshToken as string, eventId: eventId as string });
+    }));
+
     await prisma.learningPlan.delete({
       where: { id: params.learningPlanId },
     });

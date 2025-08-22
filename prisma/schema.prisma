@@ -115,6 +115,7 @@ model Task {
   completedAt   DateTime?
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @default(now())
+  googleCalendarEventId String?
 
   checklists Checklist[]
 

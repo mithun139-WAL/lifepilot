@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { deleteGoogleCalendarEvent } from "@/lib/googleCalendar";
 
 export async function GET(
   req: Request,
@@ -77,6 +78,27 @@ export async function DELETE(
         { status: 403 }
       );
     }
+
+    const learningPlan = await prisma.learningPlan.findMany({
+      where: { goalId: id },
+      include:{
+        planners:{
+          include: {
+            tasks: true,
+          }
+        }
+      }
+    });
+
+    const googleCalendarEventIds = learningPlan.flatMap(plan =>
+      plan.planners.flatMap(planner =>
+        planner.tasks.map(task => task.googleCalendarEventId)
+      )
+    );
+
+    await Promise.all(googleCalendarEventIds.map(eventId => {
+      return deleteGoogleCalendarEvent({ accessToken: session.accessToken as string, refreshToken: session.refreshToken as string, eventId: eventId as string });
+    }));
 
     await prisma.goal.delete({ where: { id } });
 
