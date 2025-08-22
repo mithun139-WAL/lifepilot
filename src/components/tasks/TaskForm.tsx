@@ -5,16 +5,17 @@ import { useTasks } from "@/context/TaskContext";
 import { useLoader } from "../common/Loader";
 
 export function TaskForm() {
-  const { addTask, openEditPopup, setOpenEditPopup,currentTask,setCurrentTask,editTask } = useTasks();
+  const { openEditPopup,setOpenEditPopup,currentTask, setCurrentTask,addChecklistItem, editChecklistItem,deleteChecklistItem,toggleChecklistItem,parentTaskId } = useTasks();
 
   useEffect(() => {
-    if (currentTask?.id) {
+    if (openEditPopup && currentTask?.id) {
       setTitle(currentTask.title);
       setDescription(currentTask.description || "");
-      setStartDate(currentTask.startDate || "");
-      setTime(currentTask.startTime || "");
+    } else if (!openEditPopup) {
+      resetForm();
     }
-  }, [currentTask]);
+  }, [openEditPopup]);
+
 
   const { showLoader, hideLoader } = useLoader();
 
@@ -34,40 +35,30 @@ export function TaskForm() {
     e.preventDefault();
     if (!title.trim()) return;
     showLoader();
-
     // extend your addTask to also store desc/date/time if needed
-    if (currentTask?.id) {
-      editTask(currentTask.id, {
+    if (currentTask?.id && parentTaskId) {
+      editChecklistItem(parentTaskId, currentTask.id,
         title,
         description,
-        startDate,
-        startTime: time,
-      });
-    } else {
-      addTask({
+        currentTask.expectedTime || ""
+      );
+    } else if(!currentTask?.id && parentTaskId) {
+      addChecklistItem(parentTaskId,
         title,
         description,
-        startDate,
-        startTime: time,
-      });
+      );
     }
-
     setTimeout(() => {
       hideLoader();
       setOpenEditPopup(false);
+      setCurrentTask(null);
       resetForm();
     }, 1000);
   };
 
   return (
     <div className="flex justify-end">
-      {/* Add Task Button */}
-      <button
-        onClick={() => setOpenEditPopup(true)}
-        className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg shadow-md"
-      >
-        Create Task
-      </button>
+     
 
       {/* Popup / Modal */}
       {openEditPopup && (
@@ -84,6 +75,7 @@ export function TaskForm() {
                 placeholder="Task title"
                 className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-500"
                 required
+                style={{outline:'none'}}
               />
 
               {/* Description */}
@@ -93,10 +85,11 @@ export function TaskForm() {
                 placeholder="Description"
                 rows={3}
                 className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-500"
+                style={{ outline: 'none' }}
               />
 
               {/* Date & Time */}
-              <div className="grid grid-cols-2 gap-4">
+              {/* <div className="grid grid-cols-2 gap-4">
                 <input
                   type="date"
                   value={startDate}
@@ -109,7 +102,7 @@ export function TaskForm() {
                   onChange={(e) => setTime(e.target.value)}
                   className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-500"
                 />
-              </div>
+              </div> */}
 
               {/* Buttons */}
               <div className="flex justify-end gap-3 pt-4">
@@ -117,7 +110,9 @@ export function TaskForm() {
                   type="button"
                   onClick={() => {
                     setOpenEditPopup(false);
+                    setCurrentTask(null);
                     resetForm();
+
                   }}
                   className="px-4 py-2 rounded-lg border hover:bg-gray-100 text-gray-500"
                 >
@@ -134,7 +129,7 @@ export function TaskForm() {
 
             {/* Close (X) button */}
             <button
-              onClick={() => setOpen(false)}
+              onClick={() => setOpenEditPopup?.(false)}
               className="absolute top-3 right-3 text-gray-500 hover:text-gray-700"
             >
               ✕

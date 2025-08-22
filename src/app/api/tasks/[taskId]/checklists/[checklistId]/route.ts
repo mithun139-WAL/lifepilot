@@ -54,6 +54,17 @@ export async function PUT(req: NextRequest, context: { params: { taskId: string,
             return NextResponse.json({ success: false, error: "Checklist not found" }, { status: 404 });
         }
 
+        const existingTitle = await prisma.checklist.findFirst({
+            where: {
+                id: { not: checklistId },
+                title: { equals: title, mode: "insensitive" },
+                taskId,
+            }
+        });
+ 
+        if (existingTitle) {
+            return NextResponse.json({ success: false, error: "checklist with this title already exists." }, { status: 400 });
+        }
         const updatedCheckList = await prisma.checklist.update({
             where: { id: checklist.id },
             data: {

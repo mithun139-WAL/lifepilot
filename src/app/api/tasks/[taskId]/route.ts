@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { TaskStatus } from "@/generated/prisma";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 
 
 export async function DELETE(req: NextRequest, context: { params: { taskId: string } }) {
@@ -57,5 +59,42 @@ export async function PUT(req: NextRequest, context: { params: { taskId: string 
   } catch (error) {
     console.error("❌ Error updating task:", error);
     return new Response(JSON.stringify({ error: "Failed to update task" }), { status: 500 });
+  }
+}
+export async function GET(req: Request, context: { params: { taskId: string } }) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { success: false, error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+ 
+    const { taskId } = await context.params;
+ 
+    const task = await prisma.task.findUnique({
+      where: { id: taskId, userId: session.user.id },
+      include: {
+        checklists: {
+          orderBy: { id: "asc" },
+        },
+      }
+    });
+ 
+    if (!task) {
+      return NextResponse.json(
+        { success: false, error: "Task not found" },
+        { status: 404 }
+      );
+    }
+ 
+    return NextResponse.json({ success: true, data: task }, { status: 200 });
+  } catch (error) {
+    console.error("Error fetching task by ID:", error);
+    return NextResponse.json(
+      { success: false, error: "Failed to fetch task" },
+      { status: 500 }
+    );
   }
 }

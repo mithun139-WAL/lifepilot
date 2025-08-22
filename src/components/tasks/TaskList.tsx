@@ -3,6 +3,7 @@
 import { useTasks } from "@/context/TaskContext";
 import { MoreVertical } from "lucide-react";
 import { useState, useEffect } from "react";
+import { TaskForm } from "./TaskForm";
 
 interface TaskListProps {
   existingTasks: any[];
@@ -12,10 +13,12 @@ export const TaskList: React.FC<TaskListProps> = ({ existingTasks }) => {
   const {
     tasks,
     setTasks,
-    deleteTask,
     toggleChecklistItem,
     renameTask,
     deleteChecklistItem,
+    setOpenEditPopup,
+    setCurrentTask,
+    setParentTaskId,
   } = useTasks();
 
   const [menuOpen, setMenuOpen] = useState<{
@@ -32,6 +35,7 @@ export const TaskList: React.FC<TaskListProps> = ({ existingTasks }) => {
 
   useEffect(() => {
     setTasks(existingTasks);
+    setParentTaskId(existingTasks[0]?.id || null);
   }, [existingTasks]);
 
   const formatDueDate = (dueDate: string) => {
@@ -72,33 +76,29 @@ export const TaskList: React.FC<TaskListProps> = ({ existingTasks }) => {
           {/* Parent task row */}
           <div className="flex justify-between items-start">
             <div>
-              {renamingId?.type === "task" && renamingId?.id === task.id ? (
-                <input
-                  value={newTitle}
-                  onChange={(e) => setNewTitle(e.target.value)}
-                  onBlur={() => {
-                    renameTask(task.id, newTitle);
-                    setRenamingId(null);
-                  }}
-                  className="bg-gray-700 text-white px-2 py-1 rounded"
-                  autoFocus
-                />
-              ) : (
-                <h3
-                  className={`text-white font-medium ${task.status === "COMPLETED"
-                      ? "line-through text-gray-400"
-                      : ""
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3
+                    className={`text-white font-medium ${
+                      task.status === "COMPLETED"
+                        ? "line-through text-gray-400"
+                        : ""
                     }`}
+                  >
+                    {task.title}
+                  </h3>
+                </div>
+                <span
+                  onClick={() => setOpenEditPopup(true)}
+                  className="cursor-pointer text-white hover:text-gray-300"
                 >
-                  {task.title}
-                </h3>
-              )}
+                  + Add Task
+                </span>
+              </div>
 
               {/* Description */}
               {task.description && (
-                <p className="text-sm text-gray-400 mt-1">
-                  {task.description}
-                </p>
+                <p className="text-sm text-gray-400 mt-1">{task.description}</p>
               )}
 
               {/* Due Date */}
@@ -109,7 +109,7 @@ export const TaskList: React.FC<TaskListProps> = ({ existingTasks }) => {
               )}
             </div>
 
-            <div className="relative">
+            {/* <div className="relative">
               <button
                 onClick={() =>
                   setMenuOpen(
@@ -144,11 +144,11 @@ export const TaskList: React.FC<TaskListProps> = ({ existingTasks }) => {
                   </button>
                 </div>
               )}
-            </div>
+            </div> */}
           </div>
 
           {/* Checklists */}
-          {task?.checklists && task.checklists?.length > 0 && (
+          {task?.checklists && task?.checklists?.length > 0 && (
             <div className="mt-3 ml-4 space-y-3">
               {task.checklists.map((check) => (
                 <div
@@ -157,17 +157,18 @@ export const TaskList: React.FC<TaskListProps> = ({ existingTasks }) => {
                 >
                   <div
                     className="flex items-start space-x-2 cursor-pointer"
-                    onClick={() => toggleChecklistItem(task.id, check.id)}
+                    onClick={() => { toggleChecklistItem(task.id, check.id, check.title, check.description, check.status === "COMPLETED" ? "PENDING" : "COMPLETED", check.expectedTime || "") }}
                   >
                     {/* Custom radio */}
                     <div
                       className={`w-5 h-5 rounded-full border flex items-center justify-center transition mt-1
-                        ${check.completedAt
-                          ? "bg-green-600 border-green-600"
-                          : "border-gray-400 group-hover:border-green-400"
+                        ${
+                          check?.status === "COMPLETED"
+                            ? "bg-green-600 border-green-600"
+                            : "border-gray-400 group-hover:border-green-400"
                         }`}
                     >
-                      {check.completedAt && (
+                      {check?.status === "COMPLETED" && (
                         <span className="text-white text-xs">✔</span>
                       )}
                     </div>
@@ -175,7 +176,7 @@ export const TaskList: React.FC<TaskListProps> = ({ existingTasks }) => {
                     <div>
                       {/* Title */}
                       {renamingId?.type === "checklist" &&
-                        renamingId?.id === check.id ? (
+                      renamingId?.id === check.id ? (
                         <input
                           value={newTitle}
                           onChange={(e) => setNewTitle(e.target.value)}
@@ -188,10 +189,11 @@ export const TaskList: React.FC<TaskListProps> = ({ existingTasks }) => {
                         />
                       ) : (
                         <span
-                          className={`text-sm block ${check.completedAt
+                          className={`text-sm block ${
+                            check.completedAt
                               ? "line-through text-gray-400"
                               : "text-white"
-                            }`}
+                          }`}
                         >
                           {check.title}
                         </span>
@@ -232,11 +234,13 @@ export const TaskList: React.FC<TaskListProps> = ({ existingTasks }) => {
                         <div className="absolute right-0 mt-2 w-28 bg-gray-700 text-white rounded shadow-lg z-10">
                           <button
                             onClick={() => {
-                              setRenamingId({
-                                type: "checklist",
-                                id: check.id,
-                              });
-                              setNewTitle(check.title);
+                              // setRenamingId({
+                              //   type: "checklist",
+                              //   id: check.id,
+                              // });
+                              // setNewTitle(check.title);
+                              setCurrentTask(check);
+                              setOpenEditPopup(true);
                               setMenuOpen(null);
                             }}
                             className="block w-full text-left px-3 py-1 hover:bg-gray-600"
@@ -261,6 +265,7 @@ export const TaskList: React.FC<TaskListProps> = ({ existingTasks }) => {
           )}
         </div>
       ))}
+      <TaskForm />
     </div>
   );
 };

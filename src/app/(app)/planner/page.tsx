@@ -3,7 +3,8 @@
 import React, { useState, useEffect } from "react";
 import { TaskList } from "@/components/tasks/TaskList";
 import { TaskProvider } from "@/context/TaskContext";
-import { Ta } from "zod/v4/locales";
+import { TaskForm } from "@/components/tasks/TaskForm";
+import { useLoader } from "@/components/common/Loader";
 
 // Days mapping
 const daysOfWeek = [
@@ -22,16 +23,23 @@ const PlannerPage: React.FC<PlannerPageProps> = ({ planId }) => {
   const [selectedWeek, setSelectedWeek] = useState<number | null>(null);
   const [selectedDay, setSelectedDay] = useState<number>(0); // 0=Sunday
   const [planDetails, setPlanDetails] = useState<any>(null);
+  const [createTaskOpen, setCreateTaskOpen] = useState<boolean>(false);
+  const { showLoader, hideLoader } = useLoader();
+
+  // const { setOpenEditPopup } = useTasks();
 
   const fetchPlanDetails = async () => {
     if (!planId) return;
     try {
+      showLoader();
       const response = await fetch(`/api/learning-plans/${planId}`);
       const data = await response.json();
       console.log("Fetched plan details in Planner page:", data);
       setPlanDetails(data);
     } catch (error) {
       console.error("Error fetching plan details:", error);
+    } finally {
+      setTimeout(hideLoader, 500);
     }
   };
 
@@ -40,7 +48,7 @@ const PlannerPage: React.FC<PlannerPageProps> = ({ planId }) => {
     if (planId) fetchPlanDetails();
   }, [planId]);
 
-  console.log('weekly plan details', planDetails?.planners);
+  console.log("weekly plan details", planDetails?.planners);
 
   return (
     <div className="space-y-4">
@@ -59,10 +67,8 @@ const PlannerPage: React.FC<PlannerPageProps> = ({ planId }) => {
 
             <button
               onClick={() => {
-                setSelectedWeek(
-                  selectedWeek === plan.week ? null : plan.week
-                )
-                setSelectedDay(0)
+                setSelectedWeek(selectedWeek === plan.week ? null : plan.week);
+                setSelectedDay(0);
               }}
               className="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
             >
@@ -87,10 +93,11 @@ const PlannerPage: React.FC<PlannerPageProps> = ({ planId }) => {
                   <button
                     key={idx}
                     onClick={() => setSelectedDay(idx)}
-                    className={`px-3 py-1 rounded-lg text-sm ${selectedDay === idx
-                      ? "bg-blue-600 text-white"
-                      : "bg-gray-700 text-gray-300 hover:bg-gray-600"
-                      }`}
+                    className={`px-3 py-1 rounded-lg text-sm ${
+                      selectedDay === idx
+                        ? "bg-blue-600 text-white"
+                        : "bg-gray-700 text-gray-300 hover:bg-gray-600"
+                    }`}
                   >
                     {day}
                   </button>
@@ -99,22 +106,25 @@ const PlannerPage: React.FC<PlannerPageProps> = ({ planId }) => {
 
               {/* Tasks for Selected Day */}
               {/* Tasks for Selected Day */}
-              <h4 className="text-lg font-semibold text-white mt-4 mb-2">
-                📅 {daysOfWeek[selectedDay]} Tasks
-              </h4>
+              <div>
+                <h4 className="text-lg font-semibold text-white mt-4 mb-2">
+                  📅 {daysOfWeek[selectedDay]} Tasks
+                </h4>
+              
+              </div>
               <div className="space-y-3">
-                {plan.tasks && plan.tasks.length > 0 && plan.tasks[selectedDay] ? (
+                {plan.tasks &&
+                plan.tasks.length > 0 &&
+                plan.tasks[selectedDay] ? (
                   <TaskProvider>
                     <TaskList existingTasks={[plan.tasks[selectedDay]]} />
                   </TaskProvider>
-
                 ) : (
                   <p className="text-gray-400 text-sm">
                     No tasks for {daysOfWeek[selectedDay]}.
                   </p>
                 )}
               </div>
-
 
               {/* Habits */}
               <h4 className="text-lg font-semibold text-white mt-6 mb-2">
@@ -132,9 +142,7 @@ const PlannerPage: React.FC<PlannerPageProps> = ({ planId }) => {
                         ({habit.frequency})
                       </span>
                     </p>
-                    <p className="text-sm text-gray-300">
-                      {habit.description}
-                    </p>
+                    <p className="text-sm text-gray-300">{habit.description}</p>
                   </div>
                 ))}
               </div>
@@ -142,8 +150,10 @@ const PlannerPage: React.FC<PlannerPageProps> = ({ planId }) => {
           )}
         </div>
       ))}
+      <TaskProvider>
+        <TaskForm />
+      </TaskProvider>
     </div>
-
   );
 };
 

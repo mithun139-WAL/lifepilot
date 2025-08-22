@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 // import React,{useState,useEffect} from "react";
 import PlannerPage from "../../planner/page";
+import { TaskProvider } from "@/context/TaskContext";
 
 interface PlanPageProps {
   params: Promise<{ id: string }>;
@@ -19,7 +20,7 @@ export default async function PlanPage({ params }: PlanPageProps) {
       <h1 className="text-2xl font-bold">
         {plan ? plan.topic : "Plan not found"}
       </h1>
-     <PlannerPage planId={plan?.id} />
+      <PlannerPage planId={plan?.id} />
     </div>
   );
 }
