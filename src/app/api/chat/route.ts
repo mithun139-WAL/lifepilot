@@ -74,7 +74,7 @@ export async function POST(req: NextRequest) {
             Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
           },
           body: JSON.stringify({
-            model: "openai/gpt-oss-20b",
+            model: "openai/gpt-oss-120b",
             messages,
             temperature: 0.4,
             max_tokens: 4096,

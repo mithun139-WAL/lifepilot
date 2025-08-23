@@ -1,31 +1,33 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { ChatHeader } from "@/components/chat/ChatHeader";
 import { ChatMessages } from "@/components/chat/ChatMessages";
 import { ChatPromptInput } from "@/components/chat/ChatPromptInput";
 import ChatSidebar from "@/components/chat/ChatSidebar";
 import { useSession } from "next-auth/react";
 import PlannerLoader from "@/components/common/PlannerLoader";
+
 export default function ChatPage() {
   const { data: session } = useSession();
   const userId = session?.user?.id;
+
   const [chats, setChats] = useState<any[]>([]);
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
-
   const [messages, setMessages] = useState<any[]>([]);
   const [showLoginHint, setShowLoginHint] = useState(false);
   const [titleUpdated, setTitleUpdated] = useState<boolean>(false);
   const [loading, setLoading] = useState(true);
+  const [isAssistantLoading, setIsAssistantLoading] = useState(false);
+  const [loaderDots, setLoaderDots] = useState(1);
 
-  const fetchChatsFromDb = async (userId: string) => {
+  const fetchChatsFromDb = useCallback(async (userId: string) => {
     setLoading(true);
     if (!userId) {
       console.error("fetchChatsFromDb: userId is missing");
       setLoading(false);
       return;
     }
-
     try {
       const res = await fetch(`/api/chats?userId=${userId}`, { method: "GET" });
       if (!res.ok) {
@@ -52,17 +54,23 @@ export default function ChatPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [activeChatId]);
 
   const fetchMessagesForChat = async (chatId: string) => {
-    const res = await fetch(`/api/chats/${chatId}/messages`, { method: "GET" });
-    const data = await res.json();
-    setMessages(data?.data ?? []);
+    try {
+      const res = await fetch(`/api/chats/${chatId}/messages`);
+      const data = await res.json();
+      setMessages(Array.isArray(data?.data) ? data.data : []);
+    } catch (err) {
+      console.error("Error fetching messages:", err);
+      setMessages([]);
+    }
   };
 
   useEffect(() => {
+    if (!userId) return;
     fetchChatsFromDb(userId as string);
-  }, [setTitleUpdated, titleUpdated]);
+  }, [userId, setTitleUpdated, titleUpdated, fetchChatsFromDb]);
 
   useEffect(() => {
     console.log("second", chats);
@@ -74,26 +82,27 @@ export default function ChatPage() {
     }
   }, [activeChatId]);
 
-  // const fetchUserId = async () => {
-  //   const res = await fetch("/api/auth/session");
-  //   const data = await res.json();
-  //   return data.user.id;
-  // };
-
   const handleCreateNewChat = async () => {
-    const res = await fetch("/api/chats", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title: "New Chat", userId }), // <-- send userId
-    });
-    const chat = await res.json();
-    setActiveChatId(chat.id);
-    await fetchChatsFromDb(userId as string);
+    if (!userId) return;
+    try {
+      const res = await fetch("/api/chats", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: "New Chat", userId }),
+      });
+      if (!res.ok) throw new Error(`Failed to create chat: ${res.status}`);
+      const chat = await res.json();
+      setActiveChatId(chat.id);
+      // Refresh chat list
+      const resChats = await fetch(`/api/chats?userId=${userId}`);
+      const chatsData = await resChats.json();
+      setChats(Array.isArray(chatsData?.data) ? chatsData.data : []);
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   // Loader state for assistant
-  const [isAssistantLoading, setIsAssistantLoading] = useState(false);
-  const [loaderDots, setLoaderDots] = useState(1);
   useEffect(() => {
     let interval: NodeJS.Timeout | undefined;
     if (isAssistantLoading) {
@@ -114,10 +123,16 @@ export default function ChatPage() {
   };
 
   const handleAssistantDone = async (chatId: string) => {
-    // Fetch messages from DB (should include the real AI response)
-    await fetchMessagesForChat(chatId);
-    setIsAssistantLoading(false);
-    setShowLoginHint(false);
+    if (!chatId) return;
+    try {
+      const res = await fetch(`/api/chats/${chatId}/messages`);
+      const data = await res.json();
+      setMessages(Array.isArray(data?.data) ? data.data : []);
+    } catch (err) {
+      console.error("Error fetching messages:", err);
+    } finally {
+      setIsAssistantLoading(false);
+    }
   };
 
   return (
@@ -133,7 +148,7 @@ export default function ChatPage() {
         />
       )}
       <div className="flex flex-col flex-1">
-        <ChatHeader />
+        {/* <ChatHeader /> */}
         <ChatMessages messages={messages} />
         {isAssistantLoading && (
           <div className="p-4 text-center text-slate-400 font-mono text-lg">

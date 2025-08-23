@@ -1,53 +1,108 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useState, useMemo } from "react";
+import { useSession } from "next-auth/react";
+import { format } from "date-fns";
 
-const todayItems = [
-  { time: "09:00 AM", title: "Deep Work: Project Alpha" },
-  { time: "11:00 AM", title: "Team Stand-up Meeting" },
-  { time: "01:00 PM", title: "Lunch & Rest" },
-  { time: "03:00 PM", title: "LifePilot Task Review" },
-  { time: "06:00 PM", title: "Workout or Walk" },
-  { time: "08:00 PM", title: "Evening Reflection" },
-];
-
-const Title = "Today's Plan";
+interface TaskItem {
+  id: string;
+  title: string;
+  preferredTime: string;
+  status: string;
+  learningPlanTitle?: string;
+}
 
 export function TodayTimeline() {
-  const upcomingTasks = useMemo(() => {
-    const now = new Date();
+  const { data: session } = useSession();
+  const userId = session?.user?.id;
 
-    // Convert task time string to Date object
-    const parsed = todayItems
-      .map((item) => {
-        const taskTime = new Date();
-        const [time, meridian] = item.time.split(" ");
-        const [hour, minute] = time.split(":").map(Number);
-        const hours24 = hour % 12 + (meridian === "PM" ? 12 : 0);
-        taskTime.setHours(hours24, minute, 0, 0);
-        return { ...item, date: taskTime };
-      })
-      .filter(({ date }) => date > now) // Keep only future tasks
-      .slice(0, 5); // Only 5 upcoming
+  const [tasks, setTasks] = useState<TaskItem[]>([]);
 
-    return parsed;
-  }, []);
+  const fetchTasks = async () => {
+    try {
+      const res = await fetch(`/api/tasks/today?userId=${userId}`);
+      const data = await res.json();
+      console.log("Today's tasks:", data);
+      setTasks(data.tasks ?? []);
+    } catch (err) {
+      console.error("Error fetching today's tasks:", err);
+      setTasks([]);
+    }
+  };
+  useEffect(() => {
+    if (!userId) return;
+
+    fetchTasks();
+  }, [userId]);
+
+  const now = new Date();
+
+  // Split tasks into Left / Right sections
+  const { leftTasks, rightTasks } = useMemo(() => {
+    const left: TaskItem[] = [];
+    const right: TaskItem[] = [];
+
+    tasks.forEach((task) => {
+      const taskTime = new Date(task.preferredTime);
+      if (task.status === "COMPLETED") return;
+
+      if (taskTime > now) {
+        left.push(task);
+      } else {
+        right.push(task);
+      }
+    });
+
+    return {
+      leftTasks: left.slice(0, 5),
+      rightTasks: right.slice(0, 5),
+    };
+  }, [tasks, now]);
 
   return (
-    <div className="backdrop-blur-md rounded-2xl border border-blue-500/20 p-4 shadow-inner h-50">
-      <h3 className="text-white font-semibold mb-4">{Title}</h3>
-      {upcomingTasks.length === 0 ? (
-        <p className="text-slate-400 text-sm">You’ve completed your tasks for today 🎉</p>
-      ) : (
-        <ul className="space-y-3">
-          {upcomingTasks.map((item, index) => (
-            <li key={index} className="text-sm text-slate-300">
-              <span className="text-blue-400 font-medium mr-2">{item.time}</span>
-              {item.title}
-            </li>
-          ))}
-        </ul>
-      )}
+    <div className="w-full backdrop-blur-md rounded-2xl border border-blue-500/20 p-4 shadow-inner text-white">
+      <h3 className="text-white font-semibold mb-4 text-lg">
+        Today&apos;s Focus
+      </h3>
+      <div className="flex flex-col md:flex-row gap-4">
+        {/* Left Section */}
+        <div className="flex-1 bg-white/5 p-3 rounded-xl border border-blue-500/20">
+          <h4 className="text-blue-300 font-medium mb-2">Upcoming Tasks</h4>
+          {leftTasks.length === 0 ? (
+            <p className="text-slate-400 text-sm">No upcoming tasks 🎉</p>
+          ) : (
+            <ul className="space-y-2 text-sm text-slate-300">
+              {leftTasks.map((task) => (
+                <li key={task.id} className="flex justify-between">
+                  <span>{task.title}</span>
+                  <span className="text-cyan-400 font-mono w-20 text-right">
+                    {format(new Date(task.preferredTime), "hh:mm a")}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        {/* Right Section */}
+        <div className="flex-1 bg-white/5 p-3 rounded-xl border border-blue-500/20">
+          <h4 className="text-pink-300 font-medium mb-2">Pending Tasks</h4>
+          {rightTasks.length === 0 ? (
+            <p className="text-slate-400 text-sm">No pending past tasks ✅</p>
+          ) : (
+            <ul className="space-y-2 text-sm text-slate-300">
+              {rightTasks.map((task) => (
+                <li key={task.id} className="flex justify-between">
+                  <span>{task.title}</span>
+                  <span className="text-pink-200 font-mono">
+                    {format(new Date(task.preferredTime), "hh:mm a")}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

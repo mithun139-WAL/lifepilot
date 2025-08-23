@@ -38,7 +38,7 @@ export default function GeneratePlanButton({ goalId }: { goalId: string }) {
     <button
       onClick={handleGeneratePlan}
       disabled={loading}
-      className="px-6 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700"
+      className="px-6 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
     >
       {loading ? "Generating..." : "Generate Plan"}
     </button>

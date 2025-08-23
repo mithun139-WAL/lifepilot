@@ -12,6 +12,7 @@ interface ChatPromptInputProps {
   setAssistantLoading?: (loading: boolean, chatId?: string) => void;
   setTitleUpdated?: (updated: boolean) => void;
   messages: { role: string; content: string }[];
+  onChatsLoad?: (userId: string) => Promise<void>;
 }
 
 export function ChatPromptInput({

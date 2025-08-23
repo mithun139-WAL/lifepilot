@@ -16,8 +16,8 @@ export default async function PlanPage({ params }: PlanPageProps) {
   });
 
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold text-cyan-400">
+    <div className="p-2">
+      <h1 className="text-2xl font-medium text-white mb-4">
         {plan ? plan.topic : "Plan not found"}
       </h1>
       <PlannerPage planId={plan?.id} />
