@@ -37,7 +37,7 @@ type TaskContextType = {
   addChecklistItem: (taskId: string, title: string, description: string) => void;
   toggleChecklistItem: (taskId: string, checklistId: string, title: string, description: string, status: string, expectedTime: string) => void;
   deleteChecklistItem: (taskId: string, checklistId: string) => void;
-  editChecklistItem: (taskId: string, checklistId: string, newTitle: string, description: string, expectedTime: string) => void;
+  editChecklistItem: (taskId: string, checklistId: string, newTitle: string, description: string, expectedTime: string, status:string) => void;
 
   openEditPopup: boolean;
   setOpenEditPopup: any;
@@ -252,10 +252,10 @@ export const TaskProvider = ({ children }: { children: React.ReactNode }) => {
     
   };
 
-  const editChecklistItem = async (taskId: string, checklistId: string, newTitle: string, description: string, expectedTime: string) => {
+  const editChecklistItem = async (taskId: string, checklistId: string, newTitle: string, description: string, expectedTime: string,status: string) => {
     if (!taskId || !checklistId || !newTitle.trim()) return;
     try {
-      const result = await editCheckListItemAPI({ taskId, checklistId, title: newTitle, description, expectedTime });
+      const result = await editCheckListItemAPI({ taskId, checklistId, title: newTitle, description, expectedTime, status });
       // setTasks((prev) =>
       //   prev.map((task) =>
       //     task.id === taskId

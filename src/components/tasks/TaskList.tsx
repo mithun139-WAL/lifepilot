@@ -25,7 +25,7 @@ export const TaskList: React.FC<TaskListProps> = ({ existingTasks, refreshPlan }
 
   const [menuOpen, setMenuOpen] = useState<{
     type: "task" | "checklist";
-    id: number;
+    id: string;
   } | null>(null);
 
   const [renamingId, setRenamingId] = useState<{
@@ -170,12 +170,11 @@ export const TaskList: React.FC<TaskListProps> = ({ existingTasks, refreshPlan }
               {task.checklists.map((check) => (
                 <div
                   key={check.id}
-                  onClick={() => task.id && handleToggleChecklist(task.id, check)}
                   className="flex justify-between items-start group"
                 >
                   <div
                     className="flex items-start space-x-2 cursor-pointer"
-                    // onClick={() => { toggleChecklistItem(task.id, check.id, check.title, check.description, check.status === "COMPLETED" ? "PENDING" : "COMPLETED", check.expectedTime || "") }}
+                    onClick={() => { toggleChecklistItem(task.id, check.id, check.title, check.description, check.status === "COMPLETED" ? "PENDING" : "COMPLETED", check.expectedTime || "") }}
                   >
                     {/* Custom radio */}
                     <div
@@ -238,16 +237,16 @@ export const TaskList: React.FC<TaskListProps> = ({ existingTasks, refreshPlan }
                     <button
                       onClick={() =>
                         setMenuOpen(
-                          menuOpen?.id === Number(check.id) &&
+                          menuOpen?.id === check.id &&
                             menuOpen?.type === "checklist"
                             ? null
-                            : { type: "checklist", id: Number(check.id) }
+                            : { type: "checklist", id: check.id }
                         )
                       }
                     >
                       <MoreVertical className="text-gray-300 w-4 h-4" />
                     </button>
-                    {menuOpen?.id === Number(check.id) &&
+                    {menuOpen?.id === check?.id &&
                       menuOpen?.type === "checklist" && (
                         <div className="absolute right-0 mt-2 w-28 bg-gray-700 text-white rounded shadow-lg z-10">
                           <button

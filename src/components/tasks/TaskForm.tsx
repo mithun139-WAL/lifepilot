@@ -40,7 +40,8 @@ export function TaskForm() {
       editChecklistItem(parentTaskId, currentTask.id,
         title,
         description,
-        currentTask.expectedTime || ""
+        currentTask.expectedTime || "",
+        currentTask?.status || "PENDING"
       );
     } else if(!currentTask?.id && parentTaskId) {
       addChecklistItem(parentTaskId,
@@ -64,7 +65,9 @@ export function TaskForm() {
       {openEditPopup && (
         <div className="fixed inset-0 flex items-center justify-center z-50 bg-black/50">
           <div className="bg-slate-900 backdrop-blur-md rounded-xl shadow-xl w-full max-w-md p-6 relative">
-            <h2 className="text-lg font-semibold mb-4">Create Task</h2>
+            <h2 className="text-lg font-semibold mb-4">
+              {`${currentTask?.id ? 'Edit' : 'Create'} Task`}
+            </h2>
 
             <form onSubmit={handleSubmit} className="space-y-4">
               {/* Title */}
