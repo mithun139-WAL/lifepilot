@@ -31,6 +31,7 @@ export async function createGoogleCalendarEvent(params: {
       calendarId: "primary",
       requestBody: event,
     });
+    if (!response.data.id) throw new Error("Google Calendar did not return an event ID");
     return response.data;
   } catch (error) {
     console.error("Error creating Google Calendar event:", error);
@@ -49,6 +50,9 @@ export async function deleteGoogleCalendarEvent(params: {
     refresh_token: params.refreshToken,
   });
   const calendar = google.calendar({ version: "v3", auth: oauth2Client });
+  if (!params.eventId) {
+    throw new Error("Missing eventId for Google Calendar delete");
+  }
   try {
     await calendar.events.delete({
       calendarId: "primary",

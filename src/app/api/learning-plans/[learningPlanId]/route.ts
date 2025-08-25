@@ -109,9 +109,12 @@ export async function DELETE(
         },
       },
     });
-    const googleCalendarEventIds = learningPlan?.planners.flatMap((planner) =>
-      planner.tasks.map((task) => task.googleCalendarEventId)
-    );
+    const googleCalendarEventIds =
+  learningPlan?.planners.flatMap((planner) =>
+    planner.tasks
+      .map((task) => task.googleCalendarEventId)
+      .filter((id): id is string => Boolean(id))
+  ) ?? [];
 
     await Promise.all(
       (googleCalendarEventIds ?? []).map((eventId) => {
