@@ -2,12 +2,12 @@ import React from "react";
 import "@fontsource/orbitron";
 import { SmartSuggestion } from "@/components/dashboard/SmartSuggestion";
 import { TodayTimeline } from "@/components/dashboard/TodayTimeline";
-import { HabitStats } from "@/components/dashboard/HabitStats";
+// import { HabitStats } from "@/components/dashboard/HabitStats";
 import { MoodInsight } from "@/components/dashboard/MoodInSight";
 import { StreakAchievements } from "@/components/dashboard/StreakAcheivements";
 // import { LifeScoreCard } from "@/components/dashboard/LifeScoreCard";
 // import { JournalPreview } from "@/components/dashboard/JournalPreview";
-// import { FocusPanel } from "@/components/dashboard/FocusPanel";
+import { FocusPanel } from "@/components/dashboard/FocusPanel";
 // import { UpcomingReminders } from "@/components/dashboard/UpcomingReminders";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
@@ -33,12 +33,12 @@ const DashboardPage = async () => {
           <SmartSuggestion />
         </div>
         <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-4 overflow-y-auto px-2">
-          <HabitStats />
+          {/* <HabitStats /> */}
           <MoodInsight />
           <StreakAchievements />
           {/* <LifeScoreCard /> */}
           {/* <JournalPreview /> */}
-          {/* <FocusPanel /> */}
+          <FocusPanel />
           {/* <UpcomingReminders /> */}
         </div>
         <div className="px-2 mt-3">

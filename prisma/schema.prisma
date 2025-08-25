@@ -24,6 +24,7 @@ model User {
   sessions      Session[]
   tasks         Task[]
   learningPlan  LearningPlan[]
+  Mood          Mood[]
 }
 
 model Account {
@@ -214,4 +215,12 @@ model LearningPlan {
 
   planners Planner[]
   habits   Habit[]
+}
+
+model Mood {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mood      String
+  createdAt DateTime @default(now())
 }

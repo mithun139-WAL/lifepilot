@@ -74,7 +74,7 @@ export function TodayTimeline() {
             <ul className="space-y-2 text-sm text-slate-300">
               {leftTasks.map((task) => (
                 <li key={task.id} className="flex justify-between">
-                  <span>{task.title}</span>
+                  <span>{task.title} - {task.learningPlanTitle}</span>
                   <span className="text-cyan-400 font-mono w-20 text-right">
                     {format(new Date(task.preferredTime), "hh:mm a")}
                   </span>
@@ -93,7 +93,7 @@ export function TodayTimeline() {
             <ul className="space-y-2 text-sm text-slate-300">
               {rightTasks.map((task) => (
                 <li key={task.id} className="flex justify-between">
-                  <span>{task.title}</span>
+                  <span>{task.title} - {task.learningPlanTitle}</span>
                   <span className="text-pink-200 font-mono">
                     {format(new Date(task.preferredTime), "hh:mm a")}
                   </span>
