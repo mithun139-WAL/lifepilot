@@ -1,15 +1,17 @@
 "use client";
 
 import { useTasks } from "@/context/TaskContext";
-import { MoreVertical } from "lucide-react";
+import { CircleCheckBig, MoreVertical, Plus } from "lucide-react";
 import { useState, useEffect } from "react";
 import { TaskForm } from "./TaskForm";
+import { Button } from "../ui/button";
 
 interface TaskListProps {
   existingTasks: any[];
+  refreshPlan?: () => void;
 }
 
-export const TaskList: React.FC<TaskListProps> = ({ existingTasks }) => {
+export const TaskList: React.FC<TaskListProps> = ({ existingTasks, refreshPlan }) => {
   const {
     tasks,
     setTasks,
@@ -32,6 +34,20 @@ export const TaskList: React.FC<TaskListProps> = ({ existingTasks }) => {
   } | null>(null);
 
   const [newTitle, setNewTitle] = useState("");
+
+  const handleToggleChecklist = async (taskId: string, check: any) => {
+    await toggleChecklistItem(
+      taskId,
+      check.id,
+      check.title,
+      check.description,
+      check.status === "COMPLETED" ? "PENDING" : "COMPLETED",
+      check.expectedTime || ""
+    );
+
+    if (refreshPlan) refreshPlan();
+  };
+
 
   useEffect(() => {
     setTasks(existingTasks);
@@ -88,12 +104,13 @@ export const TaskList: React.FC<TaskListProps> = ({ existingTasks }) => {
                     {task.title}
                   </h3>
                 </div>
-                <span
+                <Button
                   onClick={() => setOpenEditPopup(true)}
-                  className="cursor-pointer text-white hover:text-gray-300"
+                  className="cursor-pointer text-white hover:text-gray-300 flex items-center gap-1"
+                  variant={"neon"}
                 >
-                  + Add Task
-                </span>
+                  <Plus size={16}/> Add Task
+                </Button>
               </div>
 
               {/* Description */}
@@ -153,11 +170,12 @@ export const TaskList: React.FC<TaskListProps> = ({ existingTasks }) => {
               {task.checklists.map((check) => (
                 <div
                   key={check.id}
+                  onClick={() => task.id && handleToggleChecklist(task.id, check)}
                   className="flex justify-between items-start group"
                 >
                   <div
                     className="flex items-start space-x-2 cursor-pointer"
-                    onClick={() => { toggleChecklistItem(task.id, check.id, check.title, check.description, check.status === "COMPLETED" ? "PENDING" : "COMPLETED", check.expectedTime || "") }}
+                    // onClick={() => { toggleChecklistItem(task.id, check.id, check.title, check.description, check.status === "COMPLETED" ? "PENDING" : "COMPLETED", check.expectedTime || "") }}
                   >
                     {/* Custom radio */}
                     <div
@@ -169,19 +187,19 @@ export const TaskList: React.FC<TaskListProps> = ({ existingTasks }) => {
                         }`}
                     >
                       {check?.status === "COMPLETED" && (
-                        <span className="text-white text-xs">✔</span>
+                        <span className="text-white text-xs"><CircleCheckBig size={22}/></span>
                       )}
                     </div>
 
                     <div>
                       {/* Title */}
                       {renamingId?.type === "checklist" &&
-                      renamingId?.id === check.id ? (
+                      renamingId?.id === Number(check.id) ? (
                         <input
                           value={newTitle}
                           onChange={(e) => setNewTitle(e.target.value)}
                           onBlur={() => {
-                            renameTask(check.id, newTitle, task.id);
+                            renameTask(check.id, newTitle);
                             setRenamingId(null);
                           }}
                           className="bg-gray-700 text-white px-2 py-1 rounded text-sm"
@@ -220,16 +238,16 @@ export const TaskList: React.FC<TaskListProps> = ({ existingTasks }) => {
                     <button
                       onClick={() =>
                         setMenuOpen(
-                          menuOpen?.id === check.id &&
+                          menuOpen?.id === Number(check.id) &&
                             menuOpen?.type === "checklist"
                             ? null
-                            : { type: "checklist", id: check.id }
+                            : { type: "checklist", id: Number(check.id) }
                         )
                       }
                     >
                       <MoreVertical className="text-gray-300 w-4 h-4" />
                     </button>
-                    {menuOpen?.id === check.id &&
+                    {menuOpen?.id === Number(check.id) &&
                       menuOpen?.type === "checklist" && (
                         <div className="absolute right-0 mt-2 w-28 bg-gray-700 text-white rounded shadow-lg z-10">
                           <button
@@ -249,7 +267,9 @@ export const TaskList: React.FC<TaskListProps> = ({ existingTasks }) => {
                           </button>
                           <button
                             onClick={() => {
-                              deleteChecklistItem(task.id, check.id);
+                              if (task.id && check.id) {
+                                deleteChecklistItem(task.id, check.id);
+                              }
                               setMenuOpen(null);
                             }}
                             className="block w-full text-left px-3 py-1 hover:bg-gray-600"

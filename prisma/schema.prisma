@@ -146,6 +146,7 @@ model Habit {
   name           String
   description    String?
   progress       Int            @default(0)
+  streak         Int            @default(0)
   frequency      HabitFrequency @default(DAILY)
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @default(now())

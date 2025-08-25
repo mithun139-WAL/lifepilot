@@ -1,16 +1,18 @@
 import { authOptions } from "@/lib/auth";
 import { deleteGoogleCalendarEvent } from "@/lib/googleCalendar";
 import { prisma } from "@/lib/prisma";
+import { calculateStreak, isHabitCompleted } from "@/lib/utils";
 import { getServerSession } from "next-auth";
 import { NextRequest, NextResponse } from "next/server";
 
 // Get one plan
 export async function GET(
   req: NextRequest,
-  context: { params: { learningPlanId: string } }
+  { params }: { params: Promise<{ learningPlanId: string }> }
 ) {
   try {
-    const { learningPlanId } = await context.params;
+    const { learningPlanId } = await params;
+
     const plan = await prisma.learningPlan.findUnique({
       where: { id: learningPlanId },
       include: {
@@ -18,31 +20,44 @@ export async function GET(
           include: {
             tasks: {
               include: {
-                checklists: {
-                  orderBy: { id: "asc" },
-                },
+                checklists: { orderBy: { id: "asc" } },
               },
               orderBy: { dueDate: "asc" },
             },
           },
           orderBy: { week: "asc" },
         },
-        habits: true,
+        habits: {
+          include: { completions: true },
+        },
       },
     });
 
     if (!plan) {
-      return new Response(
-        JSON.stringify({ error: "Learning plan not found" }),
+      return NextResponse.json(
+        { error: "Learning plan not found" },
         { status: 404 }
       );
     }
 
-    return new Response(JSON.stringify(plan), { status: 200 });
+    // enrich habits
+    const enrichedHabits = plan.habits.map((habit) => {
+      return {
+        ...habit,
+        completed: isHabitCompleted(habit),
+        streak: habit.streak,
+        progress: habit.completions.filter((c) => c.completed).length,
+      };
+    });
+
+    return NextResponse.json(
+      { ...plan, habits: enrichedHabits },
+      { status: 200 }
+    );
   } catch (error) {
     console.error("❌ Error fetching learning plan:", error);
-    return new Response(
-      JSON.stringify({ error: "Failed to fetch learning plan" }),
+    return NextResponse.json(
+      { error: "Failed to fetch learning plan" },
       { status: 500 }
     );
   }
@@ -53,18 +68,18 @@ export async function PUT(
   { params }: { params: { id: string } }
 ) {
   try {
-    const { topic, planner, task_list, habits } = await req.json();
+    const { topic, planner, task_list } = await req.json();
 
     const plan = await prisma.learningPlan.update({
       where: { id: params.id },
-      data: { topic, planner, task_list, habits },
+      data: { topic, planner, task_list },
     });
 
-    return new Response(JSON.stringify(plan), { status: 200 });
+    return NextResponse.json(plan, { status: 200 });
   } catch (error) {
     console.error("❌ Error updating learning plan:", error);
-    return new Response(
-      JSON.stringify({ error: "Failed to update learning plan" }),
+    return NextResponse.json(
+      { error: "Failed to update learning plan" },
       { status: 500 }
     );
   }
@@ -90,17 +105,23 @@ export async function DELETE(
         planners: {
           include: {
             tasks: true,
-          }
-        }
-      }
+          },
+        },
+      },
     });
-    const googleCalendarEventIds = learningPlan?.planners.flatMap(planner =>
-      planner.tasks.map(task => task.googleCalendarEventId)
+    const googleCalendarEventIds = learningPlan?.planners.flatMap((planner) =>
+      planner.tasks.map((task) => task.googleCalendarEventId)
     );
 
-    await Promise.all((googleCalendarEventIds ?? []).map(eventId => {
-      return deleteGoogleCalendarEvent({ accessToken: session.accessToken as string, refreshToken: session.refreshToken as string, eventId: eventId as string });
-    }));
+    await Promise.all(
+      (googleCalendarEventIds ?? []).map((eventId) => {
+        return deleteGoogleCalendarEvent({
+          accessToken: session.accessToken as string,
+          refreshToken: session.refreshToken as string,
+          eventId: eventId as string,
+        });
+      })
+    );
 
     await prisma.learningPlan.delete({
       where: { id: params.learningPlanId },
