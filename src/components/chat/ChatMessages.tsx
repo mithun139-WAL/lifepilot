@@ -32,7 +32,7 @@ export function ChatMessages({ messages }: Props) {
   }
 
   return (
-    <div className="flex-1 overflow-y-auto space-y-4 p-4">
+    <div className="flex-1 overflow-y-auto space-y-4 p-2">
       {messages.map((msg, i) => (
         <div
           key={i}

@@ -151,7 +151,7 @@ export default function ChatPage() {
         {/* <ChatHeader /> */}
         <ChatMessages messages={messages} />
         {isAssistantLoading && (
-          <div className="p-4 text-center text-slate-400 font-mono text-lg">
+          <div className="p-0 text-center text-slate-400 font-mono text-lg">
             {Array(loaderDots).fill(".").join("")}
           </div>
         )}

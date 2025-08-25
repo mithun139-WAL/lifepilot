@@ -191,7 +191,7 @@ export function ChatPromptInput({
   };
 
   return (
-    <div className="p-4 border-t border-slate-800 bg-slate-900/80 backdrop-blur-md sticky bottom-0">
+    <div className="p-2 border-t border-slate-800 bg-slate-900/80 backdrop-blur-md sticky bottom-0">
       <form className="flex gap-2" onSubmit={handleSubmit}>
         <input
           type="text"

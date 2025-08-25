@@ -108,8 +108,8 @@ export default function AddGoalPopover({
           <Tooltip>
             <TooltipTrigger asChild>
               <button
-                className={`flex items-center w-full rounded-md px-3 py-2 bg-slate-800 text-gray-500 cursor-not-allowed ${
-                  collapsed ? "justify-center" : "gap-2"
+                className={`flex items-center rounded-md px-3 py-2 bg-slate-800 text-gray-500 cursor-not-allowed ${
+                  collapsed ? "justify-center w-10" : "gap-2"
                 }`}
                 disabled
               >
@@ -126,7 +126,7 @@ export default function AddGoalPopover({
         // 🔹 Normal active state with DialogTrigger
         <DialogTrigger asChild>
           <button
-            className={`flex items-center w-full rounded-md px-3 py-2 bg-blue-700 hover:bg-slate-700 transition ${
+            className={`flex items-center rounded-md px-2 py-2 bg-blue-700 hover:bg-slate-700 transition ${
               collapsed ? "justify-center" : "gap-2"
             }`}
           >

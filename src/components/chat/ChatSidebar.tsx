@@ -19,7 +19,7 @@ export default function ChatSidebar({
   createNewChat,
 }: SidebarProps) {
   return (
-    <aside className="w-64 bg-slate-900 text-white border-r border-slate-800 p-4 space-y-4">
+    <aside className="w-64 bg-slate-900 text-white border-r border-slate-800 p-2 space-y-4">
       <button
         onClick={createNewChat}
         className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded-lg w-full"
