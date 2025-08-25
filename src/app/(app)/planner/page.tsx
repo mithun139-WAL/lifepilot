@@ -7,6 +7,7 @@ import { TaskForm } from "@/components/tasks/TaskForm";
 import PlannerLoader from "@/components/common/PlannerLoader";
 import { startOfWeek } from "date-fns";
 import { Brain, Calendar1, Check, Flame, TrendingUp } from "lucide-react";
+import { useLoader } from "@/components/common/Loader";
 
 // Days mapping
 const daysOfWeek = [
@@ -25,7 +26,7 @@ interface PlannerPageProps {
 
 function getDateForDayOffset(offset: number) {
   const today = new Date();
-  const copy = new Date(today); // avoid mutating today
+  const copy = new Date(today);
   copy.setDate(copy.getDate() + offset);
   return copy;
 }
@@ -38,6 +39,7 @@ const PlannerPage: React.FC<PlannerPageProps> = ({ planId }) => {
     "DAILY"
   );
   const [loading, setLoading] = useState<boolean>(false);
+  const { showLoader, hideLoader } = useLoader();
 
   const fetchPlanDetails = async () => {
     if (!planId) return;
@@ -65,24 +67,35 @@ const PlannerPage: React.FC<PlannerPageProps> = ({ planId }) => {
     // 1. Optimistic UI update
     setPlanDetails((prev: any) => {
       if (!prev) return prev;
-      const updated = { ...prev };
-      const habit = updated.habits.find((h: any) => h.id === habitId);
-      if (habit) {
-        const existing = habit.completions.find(
-          (c: any) =>
-            new Date(c.date).toDateString() ===
-            new Date(pushDate).toDateString()
-        );
-        if (existing) {
-          existing.completed = !existing.completed;
-        } else {
-          habit.completions.push({ date: pushDate, completed: true });
-        }
-      }
-      return updated;
+
+      return {
+        ...prev,
+        habits: prev.habits.map((h: any) => {
+          if (h.id !== habitId) return h;
+
+          const completions = h.completions ? [...h.completions] : [];
+          const existingIndex = completions.findIndex(
+            (c: any) =>
+              new Date(c.date).toDateString() ===
+              new Date(pushDate).toDateString()
+          );
+
+          if (existingIndex !== -1) {
+            completions[existingIndex] = {
+              ...completions[existingIndex],
+              completed: !completions[existingIndex].completed,
+            };
+          } else {
+            completions.push({ date: pushDate, completed: true });
+          }
+
+          return { ...h, completions };
+        }),
+      };
     });
 
     // 2. Backend sync
+    showLoader();
     try {
       const res = await fetch(
         `/api/learning-plans/${planId}/habits/${habitId}/toggle`,
@@ -106,9 +119,12 @@ const PlannerPage: React.FC<PlannerPageProps> = ({ planId }) => {
           }
           return updated;
         });
+        fetchPlanDetails();
       }
     } catch (err) {
       console.error("Error toggling habit:", err);
+    } finally {
+      setTimeout(hideLoader, 500);
     }
   };
 
@@ -291,7 +307,9 @@ const PlannerPage: React.FC<PlannerPageProps> = ({ planId }) => {
                             </div>
                             <div className="mt-1 flex items-center gap-2">
                               <TrendingUp />{" "}
-                              <span className="w-5 text-cyan-400">{habit.progress}%</span>
+                              <span className="w-5 text-cyan-400">
+                                {habit.progress}%
+                              </span>
                             </div>
                           </div>
                         </div>
