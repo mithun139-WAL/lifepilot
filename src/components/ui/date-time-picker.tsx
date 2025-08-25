@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/popover";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { CalendarIcon } from "lucide-react";
+import { useEffect } from "react";
 
 const FormSchema = z.object({
   time: z.date({
@@ -78,7 +79,13 @@ export function DateTimePickerForm({
     form.setValue("time", newDate);
     onChange(newDate.toISOString());
   }
-
+  useEffect(() => {
+    if (value) {
+      form.setValue("time", new Date(value));
+    } else {
+      form.setValue("time", null as any);
+    }
+  }, [value, form]);
   return (
     <Form {...form}>
       <FormField
