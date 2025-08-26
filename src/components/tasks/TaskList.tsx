@@ -82,6 +82,26 @@ export const TaskList: React.FC<TaskListProps> = ({ existingTasks, refreshPlan }
     return label;
   };
 
+  const toggleTaskCompletion = async (data:any) => {
+    await toggleChecklistItem(
+      data.taskId,
+      data.check.id,
+      data.check.title,
+      data.check.description,
+      data.check.status,
+      data.check.expectedTime || ""
+    );
+    if (refreshPlan) refreshPlan();
+  };
+
+  const deleteCheckListItemApiCall = async (data:any) => {
+    await deleteChecklistItem(
+      data.taskId,
+      data.check.id
+    );
+    if (refreshPlan) refreshPlan();
+  };
+
   return (
     <div className="space-y-4">
       {tasks.map((task) => (
@@ -174,7 +194,18 @@ export const TaskList: React.FC<TaskListProps> = ({ existingTasks, refreshPlan }
                 >
                   <div
                     className="flex items-start space-x-2 cursor-pointer"
-                    onClick={() => { toggleChecklistItem(task.id, check.id, check.title, check.description, check.status === "COMPLETED" ? "PENDING" : "COMPLETED", check.expectedTime || "") }}
+                    onClick={() => {
+                      toggleTaskCompletion({
+                        taskId: task.id,
+                        check: {
+                          id: check.id,
+                          title: check.title,
+                          description: check.description,
+                          status: check.status === "COMPLETED" ? "PENDING" : "COMPLETED",
+                          expectedTime: check.expectedTime || ""
+                        }
+                      });
+                    }}
                   >
                     {/* Custom radio */}
                     <div
@@ -267,7 +298,12 @@ export const TaskList: React.FC<TaskListProps> = ({ existingTasks, refreshPlan }
                           <button
                             onClick={() => {
                               if (task.id && check.id) {
-                                deleteChecklistItem(task.id, check.id);
+                                deleteCheckListItemApiCall({
+                                  taskId: task.id,
+                                  check: {
+                                    id: check.id
+                                  }
+                                });
                               }
                               setMenuOpen(null);
                             }}
