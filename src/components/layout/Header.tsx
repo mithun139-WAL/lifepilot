@@ -25,8 +25,8 @@ export function Header() {
   const [open, setOpen] = useState(false);
 
   return (
-    <header className="h-16 bg-slate-950 text-white flex justify-between items-center px-6 shadow rounded-tr-2xl">
-      <h1 className="font-orbitron text-3xl text-cyan-400">LifePilot</h1>
+    <header className="h-14 bg-transparent text-white flex justify-end items-center px-3 shadow rounded-tr-2xl">
+      {/* <h1 className="font-orbitron text-3xl text-cyan-400">Personal AI Coach</h1> */}
 
       <DropdownMenu onOpenChange={(val) => setOpen(val)}>
         <DropdownMenuTrigger asChild>
@@ -37,7 +37,11 @@ export function Header() {
           >
             {" "}
             {user?.image && (
-              <AvatarImage src={user.image} alt={user.name || "User"} />
+              <AvatarImage
+                className="rounded-full border-2 border-cyan-400 shadow-[0_0_10px_#22d3ee] ring-1 ring-cyan-400"
+                src={user.image}
+                alt={user.name || "User"}
+              />
             )}
             <AvatarFallback
               className={`border font-bold transition-all ${
@@ -52,7 +56,10 @@ export function Header() {
           </Avatar>
         </DropdownMenuTrigger>
 
-        <DropdownMenuContent align="end" className="w-56 bg-slate-700 backdrop-blur-md rounded-xl border border-blue-500/20">
+        <DropdownMenuContent
+          align="end"
+          className="w-56 bg-slate-700 backdrop-blur-md rounded-xl border border-blue-500/20"
+        >
           <DropdownMenuLabel>
             <div className="text-sm font-medium text-slate-100">
               {user?.name || "Anonymous"}

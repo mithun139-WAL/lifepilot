@@ -1,149 +1,171 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { ChatHeader } from "@/components/chat/ChatHeader";
+import { useState, useEffect, useCallback } from "react";
+// import { ChatHeader } from "@/components/chat/ChatHeader";
 import { ChatMessages } from "@/components/chat/ChatMessages";
 import { ChatPromptInput } from "@/components/chat/ChatPromptInput";
 import ChatSidebar from "@/components/chat/ChatSidebar";
-import { Chat } from "@/types/chat";
+import { useSession } from "next-auth/react";
+import PlannerLoader from "@/components/common/PlannerLoader";
 
 export default function ChatPage() {
-  const [chats, setChats] = useState<Chat[]>([]);
+  const { data: session } = useSession();
+  const userId = session?.user?.id;
+
+  const [chats, setChats] = useState<any[]>([]);
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
+  const [messages, setMessages] = useState<any[]>([]);
+  const [showLoginHint, setShowLoginHint] = useState(false);
+  const [titleUpdated, setTitleUpdated] = useState<boolean>(false);
+  const [loading, setLoading] = useState(true);
+  const [isAssistantLoading, setIsAssistantLoading] = useState(false);
+  const [loaderDots, setLoaderDots] = useState(1);
 
-  async function fetchPlanner() {
-    const plannerChatId = "planner-chat";
-  
-    setChats((prev) => {
-      if (prev.find((c) => c.id === plannerChatId)) return prev;
-  
-      const newChat: Chat = {
-        id: plannerChatId,
-        title: "Learning Plan",
-        messages: [{ role: "assistant", content: "" }],
-        type: "planner",
-      };
-  
-      setActiveChatId(plannerChatId);
-      return [newChat, ...prev];
-    });
-  
-    try {
-      console.log("➡️ Triggering fetchPlanner...");
-      const res = await fetch("/api/planner", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ goal: "Lose fat and weight and gain muscle and provide deit for 1 months which should be recursive and followed the same every month", duration: "1 month" }),
-      });
-      console.log("Raw planner response:", res.status, res.ok);
-
-      const raw = await res.text(); 
-      const jsonStart = raw.indexOf("{");
-      const jsonEnd = raw.lastIndexOf("}") + 1;
-      let content = raw;
-      
-      if (jsonStart !== -1 && jsonEnd !== -1) {
-        const jsonString = raw.slice(jsonStart, jsonEnd);
-        try {
-          const parsed = JSON.parse(jsonString);
-          content = JSON.stringify(parsed, null, 2);
-        } catch (err) {
-          console.error("Failed to parse planner JSON:", err);
-          content = raw;
-        }
-      }
-      
-      setChats((prev) =>
-        prev.map((c) =>
-          c.id === plannerChatId
-            ? {
-                ...c,
-                messages: c.messages.map((msg, idx) =>
-                  msg.role === "assistant" && idx === c.messages.length - 1
-                    ? { ...msg, content }
-                    : msg
-                ),
-              }
-            : c
-        )
-      );
-    } catch (err) {
-      console.error("Failed to fetch planner:", err);
+  const fetchChatsFromDb = useCallback(async (userId: string) => {
+    setLoading(true);
+    if (!userId) {
+      console.error("fetchChatsFromDb: userId is missing");
+      setLoading(false);
+      return;
     }
-  }
+    try {
+      const res = await fetch(`/api/chats?userId=${userId}`, { method: "GET" });
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(`Failed to fetch chats: ${res.status} - ${errorText}`);
+      }
+      const result = await res.json();
+      let loadedChats = result?.data ?? [];
+      if (!Array.isArray(loadedChats)) {
+        console.warn("Expected chats array, got:", loadedChats);
+        loadedChats = [];
+      }
+      const sortedChats = loadedChats.sort(
+        (a, b) =>
+          new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+      );
+      setChats(sortedChats);
+      if (!activeChatId && sortedChats.length > 0) {
+        setActiveChatId(sortedChats[0].id);
+      }
+    } catch (err: any) {
+      console.error("Error fetching chats:", err);
+      setChats([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [activeChatId]);
+
+  const fetchMessagesForChat = async (chatId: string) => {
+    try {
+      const res = await fetch(`/api/chats/${chatId}/messages`);
+      const data = await res.json();
+      setMessages(Array.isArray(data?.data) ? data.data : []);
+    } catch (err) {
+      console.error("Error fetching messages:", err);
+      setMessages([]);
+    }
+  };
 
   useEffect(() => {
-    fetchPlanner();
-  }, []);
+    if (!userId) return;
+    fetchChatsFromDb(userId as string);
+  }, [userId, setTitleUpdated, titleUpdated, fetchChatsFromDb]);
 
-  const createNewChatWithId = (id: string) => {
-    const newChat: Chat = { id, title: "New Chat", messages: [] };
-    setChats((prev) => [newChat, ...prev]);
-    setActiveChatId(id);
+  useEffect(() => {
+    console.log("second", chats);
+  }, [chats]);
+
+  useEffect(() => {
+    if (activeChatId) {
+      fetchMessagesForChat(activeChatId);
+    }
+  }, [activeChatId]);
+
+  const handleCreateNewChat = async () => {
+    if (!userId) return;
+    try {
+      const res = await fetch("/api/chats", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: "New Chat", userId }),
+      });
+      if (!res.ok) throw new Error(`Failed to create chat: ${res.status}`);
+      const chat = await res.json();
+      setActiveChatId(chat.id);
+      // Refresh chat list
+      const resChats = await fetch(`/api/chats?userId=${userId}`);
+      const chatsData = await resChats.json();
+      setChats(Array.isArray(chatsData?.data) ? chatsData.data : []);
+    } catch (err) {
+      console.error(err);
+    }
   };
 
-  const addUserMessage = (content: string, chatId: string) => {
-    setChats((prev) =>
-      prev.map((chat) =>
-        chat.id === chatId
-          ? { ...chat, messages: [...chat.messages, { role: "user", content }] }
-          : chat
-      )
-    );
+  // Loader state for assistant
+  useEffect(() => {
+    let interval: NodeJS.Timeout | undefined;
+    if (isAssistantLoading) {
+      interval = setInterval(() => {
+        setLoaderDots((dots) => (dots + 1) % 4 || 1);
+      }, 500);
+    } else {
+      setLoaderDots(1);
+    }
+    return () => interval && clearInterval(interval);
+  }, [isAssistantLoading]);
+
+  const handlePromptSend = async (userMessage: string) => {
+    // Add user message immediately
+    setMessages((prev) => [...prev, { role: "user", content: userMessage }]);
+    setIsAssistantLoading(true);
+    setShowLoginHint(false);
   };
 
-  const addAssistantMessage = (chatId: string) => {
-    setChats((prev) =>
-      prev.map((chat) =>
-        chat.id === chatId
-          ? {
-              ...chat,
-              messages: [...chat.messages, { role: "assistant", content: "" }],
-            }
-          : chat
-      )
-    );
+  const handleAssistantDone = async (chatId: string) => {
+    if (!chatId) return;
+    try {
+      const res = await fetch(`/api/chats/${chatId}/messages`);
+      const data = await res.json();
+      setMessages(Array.isArray(data?.data) ? data.data : []);
+    } catch (err) {
+      console.error("Error fetching messages:", err);
+    } finally {
+      setIsAssistantLoading(false);
+    }
   };
-
-  const appendToAssistant = (chunk: string, chatId: string) => {
-    setChats((prev) =>
-      prev.map((chat) =>
-        chat.id === chatId
-          ? {
-              ...chat,
-              messages: chat.messages.map((msg, idx) =>
-                msg.role === "assistant" && idx === chat.messages.length - 1
-                  ? { ...msg, content: msg.content + chunk }
-                  : msg
-              ),
-            }
-          : chat
-      )
-    );
-  };
-
-  const currentChat = chats.find((c) => c.id === activeChatId);
 
   return (
     <div className="flex h-full">
-      <ChatSidebar
-        chats={chats}
-        activeChatId={activeChatId}
-        setActiveChatId={setActiveChatId}
-        createNewChat={() => createNewChatWithId(Date.now().toString())}
-      />
+      {loading ? (
+        <PlannerLoader />
+      ) : (
+        <ChatSidebar
+          chats={chats}
+          activeChatId={activeChatId}
+          setActiveChatId={setActiveChatId}
+          createNewChat={handleCreateNewChat}
+        />
+      )}
       <div className="flex flex-col flex-1">
-        <ChatHeader />
-        <ChatMessages messages={currentChat?.messages || []} />
-        {currentChat?.type !== "planner" && (
-          <ChatPromptInput
-            activeChatId={activeChatId}
-            createNewChatWithId={createNewChatWithId}
-            onUserSend={addUserMessage}
-            onAssistantStart={addAssistantMessage}
-            onAssistantStream={appendToAssistant}
-          />
+        {/* <ChatHeader /> */}
+        <ChatMessages messages={messages} />
+        {isAssistantLoading && (
+          <div className="p-0 text-center text-slate-400 font-mono text-lg">
+            {Array(loaderDots).fill(".").join("")}
+          </div>
         )}
+        <ChatPromptInput
+          activeChatId={activeChatId}
+          createNewChatWithId={setActiveChatId}
+          onUserSend={handlePromptSend}
+          onAssistantStart={() => {}}
+          onAssistantStream={() => {}}
+          onChatsLoad={fetchChatsFromDb}
+          onAssistantDone={handleAssistantDone}
+          setTitleUpdated={setTitleUpdated}
+          messages={messages}
+        />
       </div>
     </div>
   );

@@ -1,4 +1,5 @@
-// import ReactMarkdown from "react-markdown";
+import * as React from "react";
+
 interface Props {
   messages: { role: string; content: string }[];
 }
@@ -16,7 +17,13 @@ function formatMessageForMarkdown(message: string): string {
 }
 
 export function ChatMessages({ messages }: Props) {
-  if (messages.length === 0) {
+  const endRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    endRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  if (!Array.isArray(messages) || messages.length === 0) {
     return (
       <div className="flex-1 flex items-center justify-center text-slate-400">
         Start a new conversation...
@@ -25,7 +32,7 @@ export function ChatMessages({ messages }: Props) {
   }
 
   return (
-    <div className="flex-1 overflow-y-auto space-y-4 p-4">
+    <div className="flex-1 overflow-y-auto space-y-4 p-2">
       {messages.map((msg, i) => (
         <div
           key={i}
@@ -47,6 +54,7 @@ export function ChatMessages({ messages }: Props) {
           )}
         </div>
       ))}
+      <div ref={endRef} />
     </div>
   );
 }
