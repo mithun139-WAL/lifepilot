@@ -21,6 +21,7 @@ declare module "next-auth/jwt" {
     accessToken?: string;
     refreshToken?: string;
     expiresAt?: number;
+    error?: "RefreshAccessTokenError";
   }
 }
 
@@ -41,8 +42,8 @@ export const authOptions: NextAuthOptions = {
         params: {
           scope:
             "openid email profile https://www.googleapis.com/auth/calendar.events",
-            access_type: "offline",
-            prompt: "consent",
+          access_type: "offline",
+          prompt: "consent",
         },
       },
     }),
@@ -88,11 +89,17 @@ export const authOptions: NextAuthOptions = {
           }
         } catch (error) {
           console.error("Error refreshing Google access token", error);
+          // Invalidate the session by returning an error property
+          return { ...token, error: "RefreshAccessTokenError" as const };
         }
       }
       return token;
     },
     async session({ session, token }) {
+      if (token.error) {
+        // The session will be invalid if the token has an error
+        // You can add logic here to handle the client-side session accordingly
+      }
       if (token?.sub && session?.user) {
         session.user.id = token.sub;
       }

@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { NextRequest } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 
 export async function PUT(
   req: NextRequest,
@@ -9,12 +9,18 @@ export async function PUT(
 
   const chat = await prisma.chat.findUnique({ where: { id: chatId } });
   if (!chat) {
-    return Response.json({ success: false, error: "Chat not found" }, { status: 404 });
+    return NextResponse.json(
+      { success: false, error: "Chat not found" },
+      { status: 404 }
+    );
   }
 
   const { title } = await req.json();
   if (!title) {
-    return Response.json({ success: false, error: "Title is required" }, { status: 400 });
+    return NextResponse.json(
+      { success: false, error: "Title is required" },
+      { status: 400 }
+    );
   }
 
   const updatedChat = await prisma.chat.update({
@@ -22,7 +28,7 @@ export async function PUT(
     data: { title },
   });
 
-  return Response.json({ success: true, data: updatedChat }, { status: 200 });
+  return NextResponse.json({ success: true, data: updatedChat }, { status: 200 });
 }
 
 export async function GET(
@@ -33,8 +39,11 @@ export async function GET(
 
   const chat = await prisma.chat.findUnique({ where: { id: chatId } });
   if (!chat) {
-    return Response.json({ success: false, error: "Chat not found" }, { status: 404 });
+    return NextResponse.json(
+      { success: false, error: "Chat not found" },
+      { status: 404 }
+    );
   }
 
-  return Response.json({ success: true, data: chat }, { status: 200 });
+  return NextResponse.json({ success: true, data: chat }, { status: 200 });
 }
