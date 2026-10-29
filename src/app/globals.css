@@ -118,8 +118,234 @@
   }
   body {
     @apply bg-slate-950 text-slate-100 font-sans;
-    background: radial-gradient(circle at top left, #1e293b, #0f172a);
+    background: radial-gradient(ellipse at top left, #1a1035 0%, #0f0a1e 40%, #030712 100%);
     font-family: 'Inter', sans-serif;
   }
 }
 
+/* ─── Surface hierarchy ───────────────────────────────────────────────────── */
+/*
+ * Three elevation levels for clear visual depth.
+ * surface-1 = base widget (most common)
+ * surface-2 = elevated card (slightly more prominent)
+ * surface-elevated = highest — modal-like prominence
+ *
+ * WHY THREE LEVELS:
+ * Flat apps feel lifeless. Too much depth feels cluttered.
+ * Three predictable levels give hierarchy without chaos.
+ * Users subconsciously read depth as importance.
+ */
+@layer components {
+  .glass-widget {
+    @apply backdrop-blur-md rounded-2xl border border-white/10 bg-white/5 shadow-xl transition-all duration-300;
+  }
+
+  .glass-widget:hover {
+    @apply border-white/15 bg-white/8 shadow-2xl;
+  }
+
+  .glass-card {
+    @apply backdrop-blur-lg rounded-3xl border border-white/5 bg-white/5 shadow-2xl;
+  }
+
+  /* Primary surface — base widgets */
+  .surface-1 {
+    @apply bg-white/[0.04] border border-white/[0.08] rounded-2xl backdrop-blur-sm transition-all duration-200;
+  }
+
+  /* Elevated surface — key cards that demand attention */
+  .surface-2 {
+    @apply bg-white/[0.07] border border-white/[0.12] rounded-2xl backdrop-blur-md shadow-lg transition-all duration-200;
+  }
+
+  .surface-2:hover {
+    @apply bg-white/[0.09] border-white/[0.16];
+  }
+
+  /* Highest elevation — hero elements */
+  .surface-elevated {
+    @apply bg-white/[0.10] border border-white/[0.18] rounded-2xl backdrop-blur-lg shadow-xl transition-all duration-200;
+  }
+
+  /* ─── Accent glow utilities ─────────────────────────────────────────── */
+  .glow-violet {
+    box-shadow: 0 0 24px rgba(139, 92, 246, 0.25), 0 0 8px rgba(139, 92, 246, 0.15);
+  }
+
+  .glow-cyan {
+    box-shadow: 0 0 24px rgba(34, 211, 238, 0.2), 0 0 8px rgba(34, 211, 238, 0.12);
+  }
+
+  .glow-amber {
+    box-shadow: 0 0 16px rgba(251, 191, 36, 0.3), 0 0 6px rgba(251, 191, 36, 0.2);
+  }
+
+  .glow-emerald {
+    box-shadow: 0 0 16px rgba(52, 211, 153, 0.2), 0 0 6px rgba(52, 211, 153, 0.12);
+  }
+
+  /* ─── Nav item active state ─────────────────────────────────────────── */
+  .nav-active {
+    @apply bg-violet-500/15 border-l-2 border-violet-400 text-violet-300;
+  }
+
+  .nav-inactive {
+    @apply text-slate-400 hover:bg-white/5 hover:text-white;
+  }
+
+  /* ─── Score ring track ──────────────────────────────────────────────── */
+  .ring-track {
+    fill: none;
+    stroke: rgba(255, 255, 255, 0.06);
+  }
+
+  .ring-fill-violet {
+    fill: none;
+    stroke: url(#violetGradient);
+    stroke-linecap: round;
+    transition: stroke-dashoffset 1.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  /* ─── Habit check item ──────────────────────────────────────────────── */
+  .habit-done {
+    @apply line-through text-white/30;
+  }
+
+  /* ─── Mood button ───────────────────────────────────────────────────── */
+  .mood-btn {
+    @apply flex flex-col items-center gap-1 p-2 rounded-xl border border-white/10 bg-white/5
+           hover:bg-white/10 hover:border-white/20 hover:scale-105
+           transition-all duration-150 cursor-pointer select-none;
+  }
+
+  .mood-btn-active {
+    @apply bg-violet-500/20 border-violet-400/60 scale-110;
+    box-shadow: 0 0 12px rgba(139, 92, 246, 0.3);
+  }
+
+  /* ─── Task item ─────────────────────────────────────────────────────── */
+  .task-item {
+    @apply flex items-start gap-3 p-3 rounded-xl bg-white/[0.03] border border-white/[0.06]
+           hover:bg-white/[0.06] hover:border-white/[0.10] transition-all duration-150;
+  }
+
+  .task-item-completed {
+    @apply opacity-40;
+  }
+
+  /* ─── Progress bar ──────────────────────────────────────────────────── */
+  .progress-track {
+    @apply h-1.5 w-full rounded-full bg-white/10 overflow-hidden;
+  }
+
+  .progress-fill-violet {
+    @apply h-full rounded-full bg-gradient-to-r from-violet-500 to-violet-400 transition-all duration-700;
+  }
+
+  .progress-fill-cyan {
+    @apply h-full rounded-full bg-gradient-to-r from-cyan-500 to-cyan-400 transition-all duration-700;
+  }
+
+  .progress-fill-emerald {
+    @apply h-full rounded-full bg-gradient-to-r from-emerald-500 to-emerald-400 transition-all duration-700;
+  }
+}
+
+/* ─── Keyframe animations ─────────────────────────────────────────────────── */
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes checkPop {
+  0%   { transform: scale(1); }
+  50%  { transform: scale(1.3); }
+  100% { transform: scale(1); }
+}
+
+@keyframes streakPulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.7; }
+}
+
+@keyframes liquid {
+  0%   { transform: translate(0, 0) rotate(0deg); }
+  33%  { transform: translate(2px, -2px) rotate(1deg); }
+  66%  { transform: translate(-1px, 1px) rotate(-0.5deg); }
+  100% { transform: translate(0, 0) rotate(0deg); }
+}
+
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.4s ease-out both;
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out both;
+}
+
+.animate-slide-in-left {
+  animation: slideInLeft 0.35s ease-out both;
+}
+
+.animate-check-pop {
+  animation: checkPop 0.25s ease-out;
+}
+
+.animate-streak-pulse {
+  animation: streakPulse 2s ease-in-out infinite;
+}
+
+.animate-liquid {
+  animation: liquid 6s ease-in-out infinite;
+}
+
+/* ─── Staggered children delay helpers ───────────────────────────────────── */
+.stagger-1 { animation-delay: 0.05s; }
+.stagger-2 { animation-delay: 0.10s; }
+.stagger-3 { animation-delay: 0.15s; }
+.stagger-4 { animation-delay: 0.20s; }
+.stagger-5 { animation-delay: 0.25s; }
+
+/* ─── Scrollbar styling ───────────────────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}

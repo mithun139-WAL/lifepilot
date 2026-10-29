@@ -1,8 +1,22 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
-import { useSession } from "next-auth/react";
+/**
+ * src/components/dashboard/TodayTimeline.tsx
+ *
+ * WHY THIS CHANGED:
+ * - useSession() → useAuth() — user identity comes from AuthContext/tokenStore
+ * - SWR key no longer includes ?userId= — FastAPI reads user from the JWT
+ * - Plain fetcher replaced with authFetcher that injects the Bearer token
+ * - Response shape updated: FastAPI returns { success, data: [...] }
+ *   whereas the old Next.js route returned { tasks: [...] }
+ *   We check both shapes for safety during the transition.
+ */
+
+import { useMemo } from "react";
+import useSWR from "swr";
+import { useAuth } from "@/context/AuthContext";
 import { format } from "date-fns";
+import { apiClient, authFetcher } from "@/lib/apiClient";
 
 interface TaskItem {
   id: string;
@@ -13,39 +27,26 @@ interface TaskItem {
 }
 
 export function TodayTimeline() {
-  const { data: session } = useSession();
-  const userId = session?.user?.id;
+  const { isAuthenticated } = useAuth();
 
-  const [tasks, setTasks] = useState<TaskItem[]>([]);
+  const { data } = useSWR<any>(
+    // Guard on authentication; no ?userId= — FastAPI reads from JWT
+    isAuthenticated ? apiClient.url("/tasks/today") : null,
+    authFetcher
+  );
 
-  const fetchTasks = async () => {
-    try {
-      const res = await fetch(`/api/tasks/today?userId=${userId}`);
-      const data = await res.json();
-      console.log("Today's tasks:", data);
-      setTasks(data.tasks ?? []);
-    } catch (err) {
-      console.error("Error fetching today's tasks:", err);
-      setTasks([]);
-    }
-  };
-  useEffect(() => {
-    if (!userId) return;
-
-    fetchTasks();
-  }, [userId]);
+  // Support both FastAPI shape { data: [...] } and legacy Next.js shape { tasks: [...] }
+  const tasks: TaskItem[] = data?.data ?? data?.tasks ?? [];
 
   const now = new Date();
 
-  // Split tasks into Left / Right sections
   const { leftTasks, rightTasks } = useMemo(() => {
     const left: TaskItem[] = [];
     const right: TaskItem[] = [];
 
     tasks.forEach((task) => {
-      const taskTime = new Date(task.preferredTime);
       if (task.status === "COMPLETED") return;
-
+      const taskTime = new Date(task.preferredTime);
       if (taskTime > now) {
         left.push(task);
       } else {
@@ -65,7 +66,7 @@ export function TodayTimeline() {
         Today&apos;s Focus
       </h3>
       <div className="flex flex-col md:flex-row gap-4">
-        {/* Left Section */}
+        {/* Left Section — future tasks */}
         <div className="flex-1 bg-white/5 p-3 rounded-xl border border-blue-500/20">
           <h4 className="text-blue-300 font-medium mb-2">Upcoming Tasks</h4>
           {leftTasks.length === 0 ? (
@@ -84,7 +85,7 @@ export function TodayTimeline() {
           )}
         </div>
 
-        {/* Right Section */}
+        {/* Right Section — past overdue tasks */}
         <div className="flex-1 bg-white/5 p-3 rounded-xl border border-blue-500/20">
           <h4 className="text-pink-300 font-medium mb-2">Pending Tasks</h4>
           {rightTasks.length === 0 ? (

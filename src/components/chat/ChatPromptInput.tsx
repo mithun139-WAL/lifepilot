@@ -1,220 +1,228 @@
 "use client";
+
+/**
+ * src/components/chat/ChatPromptInput.tsx
+ *
+ * Changes from previous version:
+ * - getChatDetails() removed — eliminates redundant GET /chats/{id} round-trip.
+ *   New logic: if activeChatId is null → create chat; if messages.length === 0
+ *   → fire-and-forget title update. No extra API calls needed.
+ * - updateChatTitle() is now fire-and-forget (no await) — unblocks streaming.
+ * - <input> replaced with auto-resize <textarea> — handles multi-line prompts.
+ * - Enter submits (Shift+Enter = newline); Cmd/Ctrl+Enter also submits.
+ * - Removed: onAssistantStart, setAssistantLoading, onChatsLoad, setTitleUpdated
+ *   props — parent handles all of that via onUserSend / onAssistantDone.
+ * - onAssistantDone signature extended to pass finalContent to parent so the
+ *   parent can commit the message to SWR cache without a DB re-fetch.
+ * - initialValue / onInitialValueConsumed: supports suggested-prompt injection
+ *   from ChatEmptyState.
+ */
+
 import { Send } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useAuth } from "@/context/AuthContext";
+import { getAccessToken } from "@/lib/tokenStore";
+import { apiClient } from "@/lib/apiClient";
 
 interface ChatPromptInputProps {
-  onUserSend: (content: string, chatId: string) => void;
-  onAssistantStart: (chatId: string) => void;
-  onAssistantStream: (chunk: string, chatId: string) => void;
   activeChatId: string | null;
   createNewChatWithId: (id: string) => void;
-  onAssistantDone?: (chatId: string) => void;
-  setAssistantLoading?: (loading: boolean, chatId?: string) => void;
-  setTitleUpdated?: (updated: boolean) => void;
+  onUserSend: (content: string, chatId: string) => void;
+  onAssistantStream: (chunk: string) => void;
+  onAssistantDone: (chatId: string, finalContent: string) => void;
   messages: { role: string; content: string }[];
-  onChatsLoad?: (userId: string) => Promise<void>;
+  /** Pre-fill the textarea (e.g. from a suggested prompt card) */
+  initialValue?: string;
+  onInitialValueConsumed?: () => void;
 }
 
 export function ChatPromptInput({
-  onUserSend,
-  onAssistantStart,
-  onAssistantStream,
   activeChatId,
   createNewChatWithId,
+  onUserSend,
+  onAssistantStream,
   onAssistantDone,
-  setAssistantLoading,
-  setTitleUpdated,
   messages,
+  initialValue,
+  onInitialValueConsumed,
 }: ChatPromptInputProps) {
+  const { isAuthenticated } = useAuth();
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [loaderDots, setLoaderDots] = useState(0);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Pre-fill textarea from suggested-prompt injection
   useEffect(() => {
-    if (!isLoading) return;
-    const interval = setInterval(() => {
-      setLoaderDots((dots) => (dots + 1) % 4);
-    }, 500);
-    return () => clearInterval(interval);
-  }, [isLoading]);
+    if (initialValue) {
+      setInput(initialValue);
+      onInitialValueConsumed?.();
+      textareaRef.current?.focus();
+      // Trigger height recalculation
+      setTimeout(() => {
+        if (textareaRef.current) {
+          textareaRef.current.style.height = "auto";
+          textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 160)}px`;
+        }
+      }, 0);
+    }
+  }, [initialValue, onInitialValueConsumed]);
 
-  // create new chat
-  const createNewChat = async (userMessage: string) => {
-    const res = await fetch("/api/chats", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title: userMessage.slice(0, 30) }),
-    });
-    return res.json();
+  const adjustHeight = () => {
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${Math.min(el.scrollHeight, 160)}px`;
   };
 
-  // update chat title
-  const updateChatTitle = async (chatId: string, userMessage: string) => {
-    const res = await fetch(`/api/chats/${chatId}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title: userMessage.slice(0, 30) }),
-    });
-    return res.json();
+  // ── Helpers ──────────────────────────────────────────────────────────────
+
+  const createNewChat = async (firstMessage: string) => {
+    const result = await apiClient.post<{ success: boolean; data: { id: string } }>(
+      "/chats",
+      { title: firstMessage.slice(0, 40) }
+    );
+    return result?.data?.id ?? null;
   };
 
-  // create new message in the chat
-  const createNewMessage = async (
-    chatId: string,
-    role: string,
-    userMessage: string
-  ) => {
-    const res = await fetch(`/api/chats/${chatId}/messages`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        role,
-        content: userMessage,
-      }),
-    });
-    return res.json();
+  /** Fire-and-forget — does NOT block streaming */
+  const updateChatTitle = (chatId: string, userMessage: string) => {
+    apiClient
+      .put(`/chats/${chatId}`, { title: userMessage.slice(0, 40) })
+      .catch(() => {}); // silent fail — title update is cosmetic
   };
 
-  const getChatDetails = async (chatId: string) => {
-    const res = await fetch(`/api/chats/${chatId}`, { method: "GET" });
-    return res.json();
-  };
+  const saveMessage = (chatId: string, role: string, content: string) =>
+    apiClient.post(`/chats/${chatId}/messages`, { role, content });
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  // ── Submit ────────────────────────────────────────────────────────────────
+
+  const handleSubmit = async (e: React.FormEvent | React.KeyboardEvent) => {
     e.preventDefault();
-    if (!input.trim()) return;
+    if (!input.trim() || !isAuthenticated || isLoading) return;
+
     const userMessage = input.trim();
     setInput("");
-    let chatId = activeChatId;
-    const chatDetails = await getChatDetails(chatId as string);
-    if (!chatDetails) {
-      const chatRes = await createNewChat(userMessage);
-      chatId = chatRes.id;
-      if (chatId) {
-        createNewChatWithId(chatId);
-      }
-      await new Promise((resolve) => setTimeout(resolve, 0));
-    } else if (chatId && chatDetails?.data?.title === "New Chat") {
-      const titleUpdated = await updateChatTitle(chatId, userMessage);
-      if (titleUpdated) {
-        setTitleUpdated?.(true);
-      }
+    // Reset height
+    if (textareaRef.current) {
+      textareaRef.current.style.height = "auto";
     }
-    createNewMessage(chatId as string, "user", userMessage);
 
-    if (chatId) {
-      onUserSend(userMessage, chatId);
-    } else {
-      console.error("Chat ID is null. Cannot send user message.");
-    }
-    if (chatId) {
-      onAssistantStart(chatId);
-    } else {
-      console.error("Chat ID is null. Cannot start assistant.");
+    // ── Resolve chat ID ────────────────────────────────────────────────────
+    let chatId = activeChatId;
+
+    if (!chatId) {
+      // Brand-new session: create chat with the message as title
+      chatId = await createNewChat(userMessage);
+      if (!chatId) {
+        console.error("[ChatPromptInput] Failed to create chat");
+        return;
+      }
+      createNewChatWithId(chatId);
+    } else if (messages.length === 0) {
+      // First message in an existing blank chat — update title (non-blocking)
+      updateChatTitle(chatId, userMessage);
     }
 
     setIsLoading(true);
-    setLoaderDots(0);
-    if (setAssistantLoading) setAssistantLoading(true, chatId as string);
 
-    const formattedHistory = messages
-      .map((m) => `${m.role === "user" ? "User" : "Assistant"}: ${m.content}`)
-      .join("\n");
-    console.log("Conversation so far:", formattedHistory);
+    // ── Persist user message ───────────────────────────────────────────────
+    await saveMessage(chatId, "user", userMessage);
+    onUserSend(userMessage, chatId);
 
-    const res = await fetch("/api/chat", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        chatId,
-        messages: [
-          {
-            role: "assistant",
-            content: `
-              You are a personal AI Agent coach. 
-              Always provide concise, professional, and empathetic answers. 
-              Maintain continuity of conversation based on the provided chat history. 
-              If information is missing, ask clarifying questions instead of assuming.
-        
-              Rules:
-              - Never repeat or restate the conversation history verbatim.
-              - Treat the conversation history ONLY as private context for reasoning.
-              - Do not include any formatting artifacts (e.g., \\, \`, JSON, brackets) unless explicitly asked.
-              - Always output clean, natural language only.
-              - Keep answers short, clear, and conversational.
-              - If unrelated to history, respond independently and naturally.
-              - If the user asks for structured output (JSON, table, etc.), follow that format strictly.
-            `,
-          },
-          {
-            role: "user",
-            content: `Conversation so far (last 5 minutes Q&A):
-              ${formattedHistory}
-              
-              Current user query:
-              ${userMessage}
-            `,
-          },
-        ],
-      }),
-    });
+    // ── Build context window (last 10 messages) ────────────────────────────
+    const history = messages.slice(-10).map((m) => ({
+      role: m.role,
+      content: m.content,
+    }));
 
-    const reader = res.body?.getReader();
-    const decoder = new TextDecoder();
-    let done = false;
-
+    // ── Stream from FastAPI /chat/stream ───────────────────────────────────
     let assistantContent = "";
+    try {
+      const res = await fetch(apiClient.url("/chat/stream"), {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${getAccessToken() ?? ""}`,
+        },
+        body: JSON.stringify({
+          messages: [...history, { role: "user", content: userMessage }],
+        }),
+      });
 
-    while (!done) {
-      const { value, done: doneReading } = await reader!.read();
-      done = doneReading;
-      const chunkValue = decoder.decode(value);
-      assistantContent += chunkValue;
-      if (chatId) {
-        onAssistantStream(chunkValue, chatId);
-      } else {
-        console.error("Chat ID is null. Cannot stream assistant response.");
+      if (!res.body) throw new Error("No response body");
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let done = false;
+
+      while (!done) {
+        const { value, done: doneReading } = await reader.read();
+        done = doneReading;
+        const chunk = decoder.decode(value);
+        assistantContent += chunk;
+        onAssistantStream(chunk);
       }
+    } catch (err) {
+      console.error("[ChatPromptInput] Stream error:", err);
     }
 
-    await createNewMessage(chatId as string, "assistant", assistantContent);
+    // ── Persist assistant message ──────────────────────────────────────────
+    if (assistantContent) {
+      await saveMessage(chatId, "assistant", assistantContent);
+    }
 
     setIsLoading(false);
-    setLoaderDots(0);
-    if (setAssistantLoading) setAssistantLoading(false, chatId as string);
+    onAssistantDone(chatId, assistantContent);
+  };
 
-    // Notify parent that assistant message is done
-    if (typeof onAssistantDone === "function" && chatId) {
-      onAssistantDone(chatId);
-    } else if (!chatId) {
-      console.error("Chat ID is null. Cannot notify assistant completion.");
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSubmit(e);
     }
   };
 
   return (
-    <div className="p-2 border-t border-slate-800 bg-slate-900/80 backdrop-blur-md sticky bottom-0">
-      <form className="flex gap-2" onSubmit={handleSubmit}>
-        <input
-          type="text"
+    <div className="shrink-0 px-4 py-3 border-t border-white/[0.06] bg-white/[0.02] backdrop-blur-sm">
+      <form
+        className="flex items-end gap-2 surface-elevated p-2 rounded-2xl"
+        onSubmit={handleSubmit}
+      >
+        <textarea
+          ref={textareaRef}
+          rows={1}
           value={input}
-          onChange={(e) => setInput(e.target.value)}
-          placeholder="Ask anything..."
-          className="flex-1 bg-transparent text-white outline-none placeholder:text-slate-400 border border-blue-500/30 rounded-xl px-4 py-3 backdrop-blur-md shadow-[0_0_20px_#3B82F6]/30 flex items-center gap-3"
+          onChange={(e) => {
+            setInput(e.target.value);
+            adjustHeight();
+          }}
+          onKeyDown={handleKeyDown}
+          placeholder="Ask anything… (Enter to send, Shift+Enter for newline)"
           disabled={isLoading}
+          style={{ resize: "none", overflow: "hidden" }}
+          className="flex-1 min-w-0 bg-transparent text-sm text-slate-100 placeholder:text-slate-500
+                     outline-none leading-relaxed py-1 px-2 disabled:opacity-50"
         />
+
         <button
           type="submit"
-          className="px-4 rounded-full bg-blue-500 hover:bg-blue-900 transition cursor-pointer"
-          disabled={isLoading}
+          disabled={isLoading || !input.trim()}
+          className="shrink-0 w-8 h-8 rounded-xl flex items-center justify-center
+                     bg-violet-600 hover:bg-violet-500 disabled:bg-white/10
+                     disabled:text-slate-500 text-white transition-all duration-150
+                     cursor-pointer disabled:cursor-not-allowed glow-violet"
         >
-          <Send size={16} className="text-white" />
+          {isLoading ? (
+            <span className="w-3.5 h-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+          ) : (
+            <Send size={14} strokeWidth={2} />
+          )}
         </button>
-        {isLoading && (
-          <div className="flex items-center ml-2 text-slate-400 font-mono text-lg min-w-[32px]">
-            {Array(loaderDots).fill(".").join("")}
-            <span className="sr-only">AI is typing</span>
-          </div>
-        )}
       </form>
+
+      <p className="mt-1 text-center text-[10px] text-slate-600 select-none">
+        LifePilot AI may make mistakes. Verify important information.
+      </p>
     </div>
   );
 }

@@ -12,19 +12,31 @@ model User {
   id            String         @id @default(cuid())
   name          String?
   email         String?        @unique
+  passwordHash  String?        // For credentials authentication
   image         String?
   emailVerified DateTime?
+  isVerified    Boolean        @default(false)  // Email verification status
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @default(now())
-  accounts      Account[]
-  chats         Chat[]
-  goals         Goal[]
-  Habit         Habit[]
-  planners      Planner[]
-  sessions      Session[]
-  tasks         Task[]
-  learningPlan  LearningPlan[]
-  Mood          Mood[]
+  
+  // Onboarding fields
+  skillLevel         String?   // beginner/intermediate/advanced
+  weeklyHours        Int?      // hours per week available
+  pace               String?   // slow/steady/fast
+  deadline           DateTime? // optional learning deadline
+  preferredFormats   Json?     // [video, text, projects]
+  onboardingComplete Boolean   @default(false)
+  
+  accounts        Account[]
+  chats           Chat[]
+  goals           Goal[]
+  Habit           Habit[]
+  planners        Planner[]
+  sessions        Session[]
+  tasks           Task[]
+  learningPlan    LearningPlan[]
+  Mood            Mood[]
+  knowledgeChunks KnowledgeChunk[]
 }
 
 model Account {
@@ -177,6 +189,8 @@ model Chat {
   userId    String
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   messages  Message[]
+
+  @@index([userId])
 }
 
 model Message {
@@ -215,6 +229,8 @@ model LearningPlan {
 
   planners Planner[]
   habits   Habit[]
+
+  @@index([userId])
 }
 
 model Mood {
@@ -223,4 +239,30 @@ model Mood {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   mood      String
   createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+// ─────────────────────────────────────────────
+// RAG: Knowledge Base
+// ─────────────────────────────────────────────
+// NOTE: The `embedding` column (vector(1024)) is NOT in Prisma schema
+//       because Prisma doesn't natively support pgvector.
+//       It is added via a raw SQL migration (see prisma/migrations/add_pgvector.sql)
+//       and queried using prisma.$queryRaw / prisma.$executeRaw.
+
+model KnowledgeChunk {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  source     String   // filename or URL hostname
+  sourceUrl  String?  // original URL (for auto-seeded web resources)
+  sourceType String   // "pdf" | "text" | "url"
+  chunkIndex Int      // position in original document (0-based)
+  content    String   // raw text of this chunk
+  // embedding vector(1024) — added via SQL, not tracked here
+  createdAt  DateTime @default(now())
+
+  @@index([userId])
+  @@index([source])
 }

@@ -4,8 +4,7 @@ import { useEffect, useState } from "react";
 import { Header } from "./Header";
 import { Sidebar } from "./SideBar";
 import { LoaderProvider } from "../common/Loader";
-import { SessionProvider } from "next-auth/react";
-import { ChatProvider } from "@/context/ChatContext";
+import { AuthProvider } from "@/context/AuthContext";
 
 export default function MainLayout({
   children,
@@ -32,9 +31,8 @@ export default function MainLayout({
   };
 
   return (
-    <SessionProvider>
+    <AuthProvider>
       <LoaderProvider>
-        <ChatProvider>
           <div className="fixed inset-0 bg-gradient-to-br from-slate-950 to-black p-6 flex items-center justify-center overflow-hidden">
             <div className="relative w-[100vw] h-[95vh] rounded-3xl p-[2px] shadow-[0_0_40px_#3B82F6]/50">
               <div className="relative z-10 flex h-full w-full rounded-[1.4rem] bg-white/5 backdrop-blur-md">
@@ -51,8 +49,7 @@ export default function MainLayout({
               </div>
             </div>
           </div>
-        </ChatProvider>
       </LoaderProvider>
-    </SessionProvider>
+    </AuthProvider>
   );
 }

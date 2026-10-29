@@ -22,12 +22,10 @@
     "forceConsistentCasingInFileNames": true,
     "baseUrl": "src",
     "paths": {
-      "@/*": ["./*"],
-      "@prisma/client": ["./generated/prisma"]
+      "@/*": ["./*"]
     },
-    "types": ["next-auth"]
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
-  "exclude": ["node_modules"],
+  "exclude": ["node_modules", "scratch"],
   "typeRoots": ["./src/types", "./node_modules/@types"],
 }

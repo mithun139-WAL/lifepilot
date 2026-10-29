@@ -7,31 +7,45 @@ interface Suggestion {
   emoji: string;
 }
 
-const suggestions: Suggestion[] = [
-  { text: "You’ve been sitting for 3 hours — how about a 10-minute walk?", emoji: "🏃" },
-  { text: "Your mood has been low lately. Try journaling today.", emoji: "✍️" },
-  { text: "No meetings for 2 hours — maybe deep focus time?", emoji: "🧘" },
-  { text: "Hydrate! It’s been 3 hours since your last water intake.", emoji: "💧" },
-  { text: "You completed 5 habits this week — nice work!", emoji: "🎉" },
-];
+import useSWR from "swr";
+import { apiClient, authFetcher } from "@/lib/apiClient";
+import type { SuggestionsResponse } from "@/types/dashboard";
 
 export function SmartSuggestion() {
+  const { data: result, isLoading } = useSWR<SuggestionsResponse>(apiClient.url("/suggestions"), authFetcher, {
+    refreshInterval: 300000, // Refresh every 5 mins
+  });
+  
+  const suggestions = (result?.data && result.data.length > 0) ? result.data : [
+    { text: "Loading your personalized suggestions...", emoji: "🧠" }
+  ];
+
   const [index, setIndex] = useState(0);
 
   useEffect(() => {
     const interval = setInterval(() => {
-      setIndex((prev) => (prev + 1) % suggestions.length);
+      if (suggestions.length > 0) {
+        setIndex((prev) => (prev + 1) % suggestions.length);
+      }
     }, 60000);
     return () => clearInterval(interval);
-  }, []);
+  }, [suggestions.length]);
 
   useEffect(() => {
-    setIndex(Math.floor(Math.random() * suggestions.length));
-  }, []);
+    if (suggestions.length > 0) {
+      setIndex(Math.floor(Math.random() * suggestions.length));
+    } else {
+      setIndex(0);
+    }
+  }, [suggestions]);
 
   const handleNextSuggestion = () => {
-    setIndex((prev) => (prev + 1) % suggestions.length);
+    if (suggestions.length > 0) {
+      setIndex((prev) => (prev + 1) % suggestions.length);
+    }
   };
+
+  const currentSuggestion = suggestions[index] || suggestions[0];
 
   return (
     <div className="relative p-3 rounded-xl backdrop-blur-md overflow-hidden group hover:shadow-lg transition-transform duration-300">
@@ -40,7 +54,7 @@ export function SmartSuggestion() {
       
       <div className="relative z-10 flex items-center justify-between">
         <p className="text-sm text-blue-200 font-medium transition-opacity duration-500 animate-fadeIn">
-          {suggestions[index].emoji} {suggestions[index].text}
+          {currentSuggestion?.emoji} {currentSuggestion?.text}
         </p>
         <button
           onClick={handleNextSuggestion}

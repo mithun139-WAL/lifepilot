@@ -6,6 +6,7 @@ import {
   studyHoursOptions,
   studyWeeksOptions,
 } from "@/lib/constants/constants";
+import { apiClient } from "@/lib/apiClient";
 
 interface EditGoalPopupProps {
   goalId: string;
@@ -25,8 +26,7 @@ export default function EditGoalPopup({ goalId, setModal, modal }: EditGoalPopup
 
   useEffect(() => {
     const fetchGoal = async () => {
-      const res = await fetch(`/api/goals/${goalId}`);
-      const data = await res.json();
+      const data = await apiClient.get<{ data: any }>(`/goals/${goalId}`);
       const goalData = data?.data || {};
       setTitle(goalData.title || "");
       setHoursPerDay(goalData.hoursPerDay || "");
@@ -40,24 +40,19 @@ export default function EditGoalPopup({ goalId, setModal, modal }: EditGoalPopup
     e.preventDefault();
     setLoading(true);
     try {
-      const res = await fetch(`/api/goals/${goalId}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
+      const data = await apiClient.put<{ success: boolean }>(`/goals/${goalId}`, {
         title,
         hoursPerDay,
         targetWeeks,
         preferredTime,
-      }),
-    });
-    const data = await res.json();
-    setLoading(false);
-    if (data?.success) {
-      setModal("generatePlan")
-    }
-    } catch(error: unknown) {
-        setLoading(false);
-        console.error(error);
+      });
+      setLoading(false);
+      if (data?.success) {
+        setModal("generatePlan");
+      }
+    } catch (error: unknown) {
+      setLoading(false);
+      console.error(error);
     }
   };
 

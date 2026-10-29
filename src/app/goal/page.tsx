@@ -10,6 +10,9 @@ import {
   studyWeeksOptions,
 } from "@/lib/constants/constants";
 import AppLoader from "@/components/common/AppLoader";
+import { apiClient } from "@/lib/apiClient";
+import { startPlannerJob } from "@/lib/plannerJob";
+import { toast } from "sonner";
 
 export default function GoalPage() {
   const router = useRouter();
@@ -41,27 +44,19 @@ export default function GoalPage() {
     setLoading(true);
 
     try {
-      const res = await fetch("/api/goals", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title,
-          hoursPerDay: hoursPerDay,
-          targetWeeks: Number(targetWeeks),
-          preferredTime: preferredTime
-            ? new Date(preferredTime).toISOString()
-            : null,
-        }),
+      const data = await apiClient.post<{ data: { id: string } }>("/goals", {
+        title,
+        hoursPerDay: hoursPerDay,
+        targetWeeks: Number(targetWeeks),
+        // preferredTime is optional — backend defaults to tomorrow at 09:00 UTC
+        ...(preferredTime ? { preferredTime: new Date(preferredTime).toISOString() } : {}),
       });
-      if (res.ok) {
-        const data = await res.json();
-        console.log("Goal created:", data);
-        setGoalId(data.data?.id);
-        setStep("done");
-      }
-    } catch (error) {
-      console.error("Failed to create goal:", error);
-      return;
+      console.log("Goal created:", data);
+      setGoalId(data.data?.id);
+      setStep("done");
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : "Failed to create goal";
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
@@ -71,20 +66,11 @@ export default function GoalPage() {
     if (!goalId) return;
     setLoading(true);
     try {
-      console.log("➡️ Triggering plan generation for goal ID:", goalId);
-      const res = await fetch("/api/planner", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ goalId: goalId }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        console.log("Plan generated:", data);
-        router.push("/dashboard");
-      }
-    } catch (error) {
-      console.error("Failed to generate plan:", error);
-      return;
+      await startPlannerJob(goalId);
+      router.push("/dashboard");
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : "Failed to generate plan";
+      toast.error(msg);
     } finally {
       setLoading(false);
     }

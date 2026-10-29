@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useEffect, useState } from "react";
 import { useLoader } from "@/components/common/Loader";
+import { apiClient } from "@/lib/apiClient";
 
 
 export type Checklist = {
@@ -59,9 +60,7 @@ export const TaskProvider = ({ children }: { children: React.ReactNode }) => {
   const fetchTaskDetailsAPI = async (taskId: string) => {
     try {
       showLoader();
-      const response = await fetch(`/api/tasks/${taskId}`);
-      if (!response.ok) throw new Error("Failed to fetch task details");
-      const result = await response.json();
+      const result = await apiClient.get<{ data: Task }>(`/tasks/${taskId}`);
       console.log("Fetched task details api is called:", result);
       setTasks([result.data]);
     } catch (error) {
@@ -111,22 +110,13 @@ export const TaskProvider = ({ children }: { children: React.ReactNode }) => {
   const addCheckListItemAPI = async (data: any) => {
     try {
       showLoader();
-      const response = await fetch(`/api/tasks/${data.taskId}/checklists`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(data),
-      });
-      if (!response.ok) throw new Error("Failed to add checklist item");
-      const result = await response.json();
+      const result = await apiClient.post(`/tasks/${data.taskId}/checklists`, data);
       fetchTaskDetailsAPI(data.taskId);
       return result;
     } catch (error) {
       console.error("Error adding checklist item:", error);
       throw error;
-    }
-    finally {
+    } finally {
       hideLoader();
     }
   }
@@ -134,22 +124,13 @@ export const TaskProvider = ({ children }: { children: React.ReactNode }) => {
   const editCheckListItemAPI = async (data: any) => {
     try {
       showLoader();
-      const response = await fetch(`/api/tasks/${data.taskId}/checklists/${data.checklistId}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(data),
-      });
-      if (!response.ok) throw new Error("Failed to edit checklist item");
-      const result = await response.json();
+      const result = await apiClient.put(`/tasks/${data.taskId}/checklists/${data.checklistId}`, data);
       fetchTaskDetailsAPI(data.taskId);
       return result;
     } catch (error) {
       console.error("Error editing checklist item:", error);
       throw error;
-    }
-    finally {
+    } finally {
       hideLoader();
     }
   }
@@ -157,18 +138,13 @@ export const TaskProvider = ({ children }: { children: React.ReactNode }) => {
   const deleteCheckListItemAPI = async (taskId: string, checklistId: string) => {
     try {
       showLoader();
-      const response = await fetch(`/api/tasks/${taskId}/checklists/${checklistId}`, {
-        method: "DELETE",
-      });
-      if (!response.ok) throw new Error("Failed to delete checklist item");
-      const result = await response.json();
+      const result = await apiClient.delete(`/tasks/${taskId}/checklists/${checklistId}`);
       fetchTaskDetailsAPI(taskId);
       return result;
     } catch (error) {
       console.error("Error deleting checklist item:", error);
       throw error;
-    }
-    finally {
+    } finally {
       hideLoader();
     }
   }

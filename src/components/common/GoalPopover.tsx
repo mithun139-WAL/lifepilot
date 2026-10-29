@@ -16,6 +16,9 @@ import {
 } from "@/lib/constants/constants";
 import { DateTimePickerForm } from "../ui/date-time-picker";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
+import { toast } from "sonner";
+import { apiClient } from "@/lib/apiClient";
+import { startPlannerJob } from "@/lib/plannerJob";
 
 export default function AddGoalPopover({
   collapsed,
@@ -47,29 +50,22 @@ export default function AddGoalPopover({
     setLoading(true);
 
     try {
-      const res = await fetch("/api/goals", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title,
-          hoursPerDay,
-          targetWeeks: Number(targetWeeks),
-          preferredTime: preferredTime
-            ? new Date(preferredTime).toISOString()
-            : null,
-        }),
+      const data = await apiClient.post<{ data: { id: string } }>("/goals", {
+        title,
+        hoursPerDay,
+        targetWeeks: Number(targetWeeks),
+        preferredTime: preferredTime
+          ? new Date(preferredTime).toISOString()
+          : null,
       });
-
-      if (res.ok) {
-        setHoursPerDay("");
-        setTargetWeeks("");
-        setPreferredTime("");
-        const data = await res.json();
-        console.log("Goal created:", data);
-        setGoalId(data.data?.id);
-      }
-    } catch (err) {
-      console.error("Failed to add goal:", err);
+      setHoursPerDay("");
+      setTargetWeeks("");
+      setPreferredTime("");
+      console.log("Goal created:", data);
+      setGoalId(data.data?.id);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to add goal";
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
@@ -79,23 +75,14 @@ export default function AddGoalPopover({
     if (!goalId) return;
     setLoading(true);
     try {
-      console.log("➡️ Triggering plan generation for goal ID:", goalId);
-      const res = await fetch("/api/planner", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ goalId: goalId }),
-      });
-      if (res.ok) {
-        setTitle("");
-        setGoalId(null);
-        const data = await res.json();
-        console.log("Plan generated:", data);
-        setOpen(false);
-        if (onPlanCreated) onPlanCreated();
-      }
-    } catch (error) {
-      console.error("Failed to generate plan:", error);
-      return;
+      await startPlannerJob(goalId);
+      setTitle("");
+      setGoalId(null);
+      setOpen(false);
+      if (onPlanCreated) onPlanCreated();
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : "Failed to generate plan";
+      toast.error(msg);
     } finally {
       setLoading(false);
     }

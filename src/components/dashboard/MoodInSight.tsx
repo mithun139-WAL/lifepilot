@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { formatDistanceToNow } from "date-fns";
+import { apiClient } from "@/lib/apiClient";
 
 const moods = [
   { label: "Happy", emoji: "😊" },
@@ -15,23 +16,19 @@ export function MoodInsight() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch("/api/mood")
-      .then((res) => res.json())
+    apiClient.get<any[]>("/mood")
       .then((data) => {
-        // assume API returns an array of moods [{mood, createdAt}]
-        setMoodLogs(data || []);
+        setMoodLogs(Array.isArray(data) ? data : []);
+        setLoading(false);
+      })
+      .catch(() => {
+        setMoodLogs([]);
         setLoading(false);
       });
   }, []);
 
   const logMood = async (mood: string) => {
-    const res = await fetch("/api/mood", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ mood }),
-    });
-    const data = await res.json();
-
+    const data = await apiClient.post("/mood", { mood });
     setMoodLogs((prev) => {
       const safePrev = Array.isArray(prev) ? prev : [];
       return [data, ...safePrev];
@@ -39,7 +36,7 @@ export function MoodInsight() {
   };
 
   return (
-    <div className="backdrop-blur-md rounded-xl border border-blue-500/20 p-4 shadow-inner h-60 flex flex-col">
+    <div className="glass-widget p-4 h-60 flex flex-col">
       <h3 className="text-blue-500 font-semibold mb-4">Mood Insights</h3>
 
       {/* Logs Section */}
